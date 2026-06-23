@@ -348,7 +348,254 @@ const firecrawlAdapter: Adapter = {
   },
 };
 
-const ADAPTERS: Adapter[] = [redditAdapter, hackerNewsAdapter, firecrawlAdapter];
+// ─────────────────────────── Native AI-Gateway grounded "scout" ───────────────────────────
+// Uses the existing LOVABLE_API_KEY / Lovable AI Gateway to ask a model to
+// surface REAL public pain signals with REAL cited URLs. We then verify each
+// URL with a HEAD request — fabricated URLs (404 / DNS fail) are dropped. If
+// nothing real survives, the adapter returns empty + status "unsupported" and
+// NEVER persists fabricated data.
+const LOVABLE_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+const scoutSchema = {
+  type: "function" as const,
+  function: {
+    name: "report_pain_signals",
+    description: "Report public pain signals with real, currently-reachable source URLs found via web search. Do NOT invent URLs.",
+    parameters: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              source_url: { type: "string", description: "Real public URL (Reddit thread, HN comment, G2/Capterra/Trustpilot review, blog post) that you actually found." },
+              title: { type: "string" },
+              body: { type: "string", description: "Verbatim or close-paraphrase of the user's complaint, 1-5 sentences." },
+            },
+            required: ["source_url", "body"], additionalProperties: false,
+          },
+        },
+      },
+      required: ["items"], additionalProperties: false,
+    },
+  },
+};
+
+async function verifyUrl(url: string): Promise<boolean> {
+  try {
+    const ctl = new AbortController();
+    const to = setTimeout(() => ctl.abort(), 4000);
+    const r = await fetch(url, { method: "HEAD", redirect: "follow", signal: ctl.signal });
+    clearTimeout(to);
+    if (r.status < 400) return true;
+    // Some sites 405 on HEAD — retry GET (range-limited).
+    if (r.status === 405 || r.status === 403) {
+      const ctl2 = new AbortController();
+      const to2 = setTimeout(() => ctl2.abort(), 4000);
+      const r2 = await fetch(url, { method: "GET", headers: { Range: "bytes=0-256" }, signal: ctl2.signal });
+      clearTimeout(to2);
+      return r2.status < 400;
+    }
+    return false;
+  } catch { return false; }
+}
+
+const aiGatewayScoutAdapter: Adapter = {
+  name: "ai_gateway_scout",
+  isConfigured: (ctx) => !!Deno.env.get("LOVABLE_API_KEY") && ctx.keywords.length > 0,
+  async collect(ctx) {
+    const key = Deno.env.get("LOVABLE_API_KEY")!;
+    // Try a search-grounded request. The Lovable AI Gateway is OpenAI-compatible
+    // and may or may not support Google Search grounding tools; if the request
+    // shape is rejected (400) we mark unsupported rather than fabricating.
+    const system = `You are a research scout. Use ONLY real public web sources (Reddit, Hacker News, G2, Capterra, Trustpilot, blogs, forums) to surface CURRENT pain signals about the user's vertical. NEVER invent URLs — every source_url MUST be a real page you actually found. If you can't find real evidence, return an empty list.`;
+    const user = `Vertical: ${ctx.vertical} (${ctx.product}).
+Keywords: ${ctx.keywords.join(", ")}.
+Find up to 10 recent public complaints/pain points from real users in the last ${ctx.lookbackDays} days where possible. Each item MUST include a real source_url.`;
+
+    const body = {
+      model: "google/gemini-3-flash-preview",
+      messages: [{ role: "system", content: system }, { role: "user", content: user }],
+      tools: [
+        scoutSchema,
+        // Best-effort: ask for Google Search grounding. If the gateway ignores
+        // this tool we still get structured output; if it rejects the field
+        // entirely we mark unsupported below.
+        { type: "google_search" } as unknown as Record<string, unknown>,
+      ],
+      tool_choice: { type: "function", function: { name: "report_pain_signals" } },
+      max_tokens: 4096,
+    };
+
+    let raw: any;
+    try {
+      const res = await fetch(LOVABLE_GATEWAY, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.status === 400) {
+        // Retry without the unknown google_search tool — gateway may not support it.
+        const res2 = await fetch(LOVABLE_GATEWAY, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ ...body, tools: [scoutSchema] }),
+        });
+        if (!res2.ok) return { items: [], status: "skipped", note: `gateway ${res2.status} (no grounding)`, posts: 0 };
+        raw = await res2.json();
+      } else if (!res.ok) {
+        return { items: [], status: "degraded", note: `gateway ${res.status}`, posts: 0 };
+      } else {
+        raw = await res.json();
+      }
+    } catch (e) {
+      return { items: [], status: "degraded", note: (e as Error).message, posts: 0 };
+    }
+
+    const tc = raw?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    let parsed: { items?: { source_url: string; title?: string; body: string }[] } = {};
+    try { parsed = typeof tc === "string" ? JSON.parse(tc) : (tc ?? {}); } catch { /* noop */ }
+    const candidates = (parsed.items ?? []).filter((it) => it?.source_url && it?.body && it.body.length >= 24);
+    const posts = candidates.length;
+    if (posts === 0) return { items: [], status: "ok", note: "no grounded results", posts: 0 };
+
+    // Verify each URL is reachable. Drop fabricated/dead links.
+    const verified = await Promise.all(candidates.map(async (it) => ((await verifyUrl(it.source_url)) ? it : null)));
+    const real = verified.filter(Boolean) as { source_url: string; title?: string; body: string }[];
+
+    if (real.length === 0) {
+      return { items: [], status: "unsupported", note: "no URLs verified — model could not ground in real web results", posts };
+    }
+    const items: Item[] = real.map((it) => ({
+      source: sourceFor(it.source_url),
+      source_url: it.source_url,
+      title: it.title,
+      body: it.body.slice(0, 4000),
+      product_tag: ctx.product,
+      raw: { via: "ai_gateway_scout", verified: true },
+    }));
+    return { items, status: "ok", note: `${real.length}/${posts} URLs verified`, posts };
+  },
+};
+
+// ─────────────────────────── Anthropic web_search ───────────────────────────
+// Dormant until ANTHROPIC_API_KEY is set. Uses Claude's server-side web_search
+// tool to find + extract real pain signals with real citation URLs.
+const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+
+const anthropicWebSearchAdapter: Adapter = {
+  name: "anthropic_web_search",
+  isConfigured: (ctx) => !!Deno.env.get("ANTHROPIC_API_KEY") && ctx.keywords.length > 0,
+  async collect(ctx) {
+    const key = Deno.env.get("ANTHROPIC_API_KEY")!;
+    const prompt = `Find recent public pain points for "${ctx.vertical}" (keywords: ${ctx.keywords.slice(0, 8).join(", ")}). Search Reddit, Hacker News, G2, Capterra, Trustpilot, and blogs. For each finding, return STRICT JSON like {"items":[{"source_url":"...","title":"...","body":"..."}]} where source_url is a real URL you actually visited. No invented URLs.`;
+    try {
+      const res = await fetch(ANTHROPIC_URL, {
+        method: "POST",
+        headers: {
+          "x-api-key": key,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 4096,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 8 }],
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+      if (!res.ok) return { items: [], status: "degraded", note: `anthropic ${res.status}`, posts: 0 };
+      const json = await res.json();
+
+      // Collect citation URLs from web_search_tool_result blocks.
+      const citedUrls = new Set<string>();
+      for (const block of (json.content ?? [])) {
+        if (block.type === "web_search_tool_result" && Array.isArray(block.content)) {
+          for (const r of block.content) if (r?.url) citedUrls.add(r.url);
+        }
+        // text blocks may also carry citations
+        if (Array.isArray(block.citations)) for (const c of block.citations) if (c?.url) citedUrls.add(c.url);
+      }
+
+      // Find the model's final text and parse JSON.
+      const text = (json.content ?? []).filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n");
+      const m = text.match(/\{[\s\S]*"items"[\s\S]*\}/);
+      let parsed: { items?: { source_url: string; title?: string; body: string }[] } = {};
+      if (m) try { parsed = JSON.parse(m[0]); } catch { /* noop */ }
+      const candidates = (parsed.items ?? []).filter((it) =>
+        it?.source_url && it?.body && it.body.length >= 24 && citedUrls.has(it.source_url)
+      );
+      if (candidates.length === 0) return { items: [], status: "ok", note: "no cited items", posts: 0 };
+      const items: Item[] = candidates.map((it) => ({
+        source: sourceFor(it.source_url),
+        source_url: it.source_url,
+        title: it.title,
+        body: it.body.slice(0, 4000),
+        product_tag: ctx.product,
+        raw: { via: "anthropic_web_search" },
+      }));
+      return { items, status: "ok", note: "", posts: candidates.length };
+    } catch (e) {
+      return { items: [], status: "degraded", note: (e as Error).message, posts: 0 };
+    }
+  },
+};
+
+// ─────────────────────────── Perplexity Sonar ───────────────────────────
+// Dormant until PERPLEXITY_API_KEY is set. Sonar returns grounded answers
+// with `citations: string[]` — we store the citation URLs as real items.
+const PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions";
+
+const perplexityAdapter: Adapter = {
+  name: "perplexity_sonar",
+  isConfigured: (ctx) => !!Deno.env.get("PERPLEXITY_API_KEY") && ctx.keywords.length > 0,
+  async collect(ctx) {
+    const key = Deno.env.get("PERPLEXITY_API_KEY")!;
+    const query = `Find recent, specific public complaints and pain points from people working in or buying "${ctx.vertical}". Focus on: ${ctx.keywords.slice(0, 8).join(", ")}. Quote 1-2 sentences per pain point with the source URL.`;
+    try {
+      const res = await fetch(PERPLEXITY_URL, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "sonar",
+          messages: [
+            { role: "system", content: "Be specific. Quote real users. Cite real URLs." },
+            { role: "user", content: query },
+          ],
+          search_recency_filter: ctx.lookbackDays <= 7 ? "week" : ctx.lookbackDays <= 31 ? "month" : "year",
+        }),
+      });
+      if (!res.ok) return { items: [], status: "degraded", note: `perplexity ${res.status}`, posts: 0 };
+      const json = await res.json();
+      const content: string = json?.choices?.[0]?.message?.content ?? "";
+      const citations: string[] = Array.isArray(json?.citations) ? json.citations : [];
+      if (!content || citations.length === 0) return { items: [], status: "ok", note: "no citations", posts: 0 };
+      // Split the answer into paragraphs and zip with citations as evidence rows.
+      const paras = content.split(/\n{2,}|\n(?=[-*\d])/).map((s) => s.trim()).filter((s) => s.length >= 24);
+      const items: Item[] = citations.map((url, i) => ({
+        source: sourceFor(url),
+        source_url: url,
+        title: undefined,
+        body: (paras[i] ?? paras[0] ?? content).slice(0, 4000),
+        product_tag: ctx.product,
+        raw: { via: "perplexity_sonar" },
+      }));
+      return { items, status: "ok", note: "", posts: citations.length };
+    } catch (e) {
+      return { items: [], status: "degraded", note: (e as Error).message, posts: 0 };
+    }
+  },
+};
+
+const ADAPTERS: Adapter[] = [
+  redditAdapter,
+  hackerNewsAdapter,
+  aiGatewayScoutAdapter,
+  anthropicWebSearchAdapter,
+  perplexityAdapter,
+  firecrawlAdapter,
+];
 
 // ─────────────────────────── Gemini synth (niceace demo only) ───────────────────────────
 const synthSchema = {

@@ -274,7 +274,11 @@ const SignalBoard = () => {
       if (cErr) throw cErr;
       const status = ((collected as any)?.sources?.status ?? []) as { name: string; status: string; posts: number }[];
       const active = status.filter((s) => s.status !== "skipped");
-      const niceName = (n: string) => n === "hackernews" ? "Hacker News" : n === "reddit" ? "Reddit" : n === "firecrawl" ? "review sites" : n === "ai_synth" ? "AI synth (demo)" : n;
+      const niceName = (n: string) => ({
+        reddit: "Reddit", hackernews: "Hacker News", firecrawl: "review sites",
+        ai_gateway_scout: "AI scout", anthropic_web_search: "Claude web search",
+        perplexity_sonar: "Perplexity", ai_synth: "AI synth (demo)",
+      } as Record<string, string>)[n] ?? n;
       const viaLabel = active.length ? active.map((s) => niceName(s.name)).join(" · ") : "no sources configured";
       const degraded = active.some((s) => s.status === "degraded");
       toast.message(`Collected ${(collected as any)?.collected ?? 0} items via ${viaLabel}${degraded ? " (some degraded)" : ""} — ${(collected as any)?.persisted ?? 0} new`);
