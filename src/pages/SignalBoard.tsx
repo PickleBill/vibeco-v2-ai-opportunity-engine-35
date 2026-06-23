@@ -388,7 +388,7 @@ const SignalBoard = () => {
               </div>
               <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight">Signal Board</h1>
               <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                Customer pain points mined from public sources (Reddit + app-store reviews),
+                Customer pain points mined from public sources (Reddit · Hacker News · review sites),
                 clustered and turned into ranked, evidence-backed feature candidates. Promote
                 the strongest into the build loop.
               </p>
