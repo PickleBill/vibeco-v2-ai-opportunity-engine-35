@@ -484,11 +484,14 @@ Find up to 10 recent public complaints/pain points from real users in the last $
 // tool to find + extract real pain signals with real citation URLs.
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
+const getAnthropicKey = () =>
+  Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("anthropic_api_key") || "";
+
 const anthropicWebSearchAdapter: Adapter = {
   name: "anthropic_web_search",
-  isConfigured: (ctx) => !!Deno.env.get("ANTHROPIC_API_KEY") && ctx.keywords.length > 0,
+  isConfigured: (ctx) => !!getAnthropicKey() && ctx.keywords.length > 0,
   async collect(ctx) {
-    const key = Deno.env.get("ANTHROPIC_API_KEY")!;
+    const key = getAnthropicKey();
     const prompt = `Find recent public pain points for "${ctx.vertical}" (keywords: ${ctx.keywords.slice(0, 8).join(", ")}). Search Reddit, Hacker News, G2, Capterra, Trustpilot, and blogs. For each finding, return STRICT JSON like {"items":[{"source_url":"...","title":"...","body":"..."}]} where source_url is a real URL you actually visited. No invented URLs.`;
     try {
       const res = await fetch(ANTHROPIC_URL, {
