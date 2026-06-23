@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { HelmetProvider, Helmet } from "react-helmet-async";
-import { Radar, Sparkles, ArrowUpRight, X, Quote, Loader2, TrendingUp } from "lucide-react";
+import { Radar, Sparkles, ArrowUpRight, X, Quote, Loader2, TrendingUp, Radio } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 /**
  * Signal Board — the human-gated surface for Signal Mine (Stage 5).
