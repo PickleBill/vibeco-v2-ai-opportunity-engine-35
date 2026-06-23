@@ -220,10 +220,40 @@ const SignalBoard = () => {
                 the strongest into the build loop.
               </p>
             </div>
-            <Button onClick={runScan} disabled={scanning} className="gap-2">
-              {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {scanning ? "Scanning…" : "Run scan"}
-            </Button>
+            <div className="flex items-center gap-2">
+              {productTags.length > 1 && (
+                <Select value={activeTag ?? undefined} onValueChange={(v) => setActiveTag(v)}>
+                  <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Vertical" /></SelectTrigger>
+                  <SelectContent>
+                    {productTags.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+              <Button onClick={runScan} disabled={scanning} className="gap-2">
+                {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {scanning ? "Scanning…" : "Run scan"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Live/Sample status strip */}
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+            {usingSample ? (
+              <Badge variant="outline" className="gap-1.5 border-warning/50 text-warning">
+                <span className="h-1.5 w-1.5 rounded-full bg-warning" /> SAMPLE DATA
+              </Badge>
+            ) : (
+              <Badge className="gap-1.5 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/15">
+                <Radio className="h-3 w-3" /> LIVE DATA
+              </Badge>
+            )}
+            {!usingSample && activeTag && (
+              <span className="text-muted-foreground">
+                vertical: <span className="font-mono text-foreground">{activeTag}</span>
+                {latestScanDate && <> · latest scan {latestScanDate}</>}
+                <> · source: Live scan · Reddit/X</>
+              </span>
+            )}
           </div>
 
           {/* Stat strip */}
