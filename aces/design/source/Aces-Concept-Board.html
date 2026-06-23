@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Aces — Concept Board</title>
+<link rel="stylesheet" href="concepts/concepts.css"/>
+<style>
+  html,body{margin:0;height:100%;background:#f0eee9;}
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useEffect } = React;
+
+/* tiny shared bits */
+function SBar({tone}){
+  return (
+    <div className="sbar" style={{color:tone}}>
+      <span>9:41</span>
+      <span className="dots">
+        <svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="6.5" width="3" height="4" rx=".6" fill={tone}/><rect x="4.4" y="4" width="3" height="6.5" rx=".6" fill={tone}/><rect x="8.8" y="2" width="3" height="8.5" rx=".6" fill={tone}/><rect x="13.2" y="0" width="3" height="10.5" rx=".6" fill={tone}/></svg>
+        <svg width="22" height="11" viewBox="0 0 24 11"><rect x="0.5" y="0.5" width="20" height="10" rx="2.6" fill="none" stroke={tone} strokeOpacity=".4"/><rect x="2" y="2" width="16" height="7" rx="1.4" fill={tone}/><rect x="21.5" y="3.5" width="1.8" height="4" rx=".9" fill={tone} fillOpacity=".4"/></svg>
+      </span>
+    </div>
+  );
+}
+const Av = ({c,t}) => <span style={{background:c}}>{t}</span>;
+
+/* 1 · JACKPOT */
+function Jackpot(){
+  return (
+    <div className="scr c-jackpot">
+      <div className="notch"></div>
+      <div className="rays"></div>
+      <SBar tone="#fff"/>
+      <div className="body">
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <span className="ctx">Pebble Beach · Hole 7</span>
+          <span className="live"><i></i>LIVE</span>
+        </div>
+        <div className="eyebrow">TODAY'S ACE POT</div>
+        <div className="potwrap">
+          <div className="bulbs"></div>
+          <div className="potlabel">★ WINNER TAKES ALL ★</div>
+          <div className="num tn">$48,750</div>
+          <div className="sub">137 players in · pot grows every entry</div>
+        </div>
+        <div className="headline">$10 IN.<br/>ACE IT. <b>WIN IT ALL.</b></div>
+        <div className="ticker">🏌️ Maria K. just entered &nbsp;·&nbsp; <b>$48,760</b> &nbsp;·&nbsp; Dev R. is on the tee &nbsp;·&nbsp; 2 aces this month</div>
+        <div className="cta">TAP TO ENTER · $10 →</div>
+        <div className="foot">Apple Pay · You're entered in 3 seconds</div>
+      </div>
+    </div>
+  );
+}
+
+/* 2 · BROADCAST */
+function Broadcast(){
+  return (
+    <div className="scr c-bcast">
+      <div className="notch"></div>
+      <div className="grid"></div>
+      <SBar tone="#fff"/>
+      <div className="body">
+        <div className="top">
+          <span className="live"><i></i>LIVE</span>
+          <span className="net">ACES · TOUR FEED</span>
+        </div>
+        <div className="hero">
+          <div className="hole">HOLE 7 · ON THE TEE</div>
+          <div className="player">PEBBLE BEACH</div>
+          <div className="yards tn">106 YDS · PAR 3 · WIND 8MPH</div>
+        </div>
+        <div className="third">
+          <div className="third-h"><span>ACE JACKPOT</span><span style={{color:'#37d66b'}}>▲ LIVE</span></div>
+          <div className="third-b">
+            <div className="pot"><div className="k">CURRENT POT</div><div className="v tn">$48,750</div></div>
+            <div className="odds"><div className="k">FIELD</div><div className="v tn">137</div></div>
+          </div>
+        </div>
+        <div className="ticker">▸ M.KESSLER ENTERED &nbsp; ▸ POT $48,760 &nbsp; ▸ D.RAO ON TEE &nbsp; ▸ 2 ACES MTD</div>
+        <div className="cta">ENTER THE POT <small>$10 →</small></div>
+      </div>
+    </div>
+  );
+}
+
+/* 3 · CLUBHOUSE */
+function Clubhouse(){
+  return (
+    <div className="scr c-club">
+      <div className="notch"></div>
+      <SBar tone="#22180f"/>
+      <div className="body">
+        <div className="hd">
+          <div className="brand">aces<b>.</b></div>
+          <div className="pin">📍 Hole 7 · Par 3</div>
+        </div>
+        <div className="card">
+          <div className="crew">
+            <div className="avs">
+              <Av c="#ff6b4a" t="JD"/><Av c="#1f9d55" t="MK"/><Av c="#3b7dd8" t="DR"/><Av c="#9a5cd0" t="+5"/>
+            </div>
+            <div className="crewtxt"><b>Your foursome</b> + 5 others are in</div>
+          </div>
+          <div className="potline">
+            <div className="potk">Group pot today</div>
+            <div className="potv tn">$<b>1,280</b></div>
+          </div>
+          <div className="bar"><i></i></div>
+          <div className="barlbl"><span>72% to the $1,800 milestone</span><span>128 in</span></div>
+        </div>
+        <div className="feed">
+          <div className="ev"><span className="d" style={{background:'#1f9d55'}}></span><span><b>Maria</b> just joined the pot 🎉</span></div>
+          <div className="ev"><span className="d" style={{background:'#ff6b4a'}}></span><span><b>Dev</b> is up next on the tee</span></div>
+          <div className="ev"><span className="d" style={{background:'#3b7dd8'}}></span><span><b>Sam</b> aced #4 last week · won $920</span></div>
+        </div>
+        <div className="cta">Join the pot · $10 →</div>
+        <div className="foot">Split nothing. Win everything. 🏆</div>
+      </div>
+    </div>
+  );
+}
+
+/* 4 · HERITAGE */
+function Heritage(){
+  return (
+    <div className="scr c-heritage">
+      <div className="notch"></div>
+      <SBar tone="#11362a"/>
+      <div className="body">
+        <div className="crest">⛳ THE ACE CLUB</div>
+        <div className="estd">PEBBLE BEACH · EST. MMXXV</div>
+        <div className="rule"></div>
+        <div className="invite">You are invited to play</div>
+        <div className="hole">The Seventh — a Par Three</div>
+        <div className="purse">
+          <div className="pk">Today's Purse</div>
+          <div className="pv tn"><sup>$</sup>48,750</div>
+          <div className="meta">137 members entered · winner takes the purse</div>
+        </div>
+        <div className="members">
+          <div className="mrow"><span className="nm"><span className="rk">I</span>Eleanor V.</span><span className="amt">2 aces</span></div>
+          <div className="mrow"><span className="nm"><span className="rk">II</span>James P.</span><span className="amt">1 ace</span></div>
+          <div className="mrow"><span className="nm"><span className="rk">III</span>Marcus L.</span><span className="amt">1 ace</span></div>
+        </div>
+        <div className="cta">Enter the Purse · $10 →</div>
+        <div className="foot">Discreet · One tap · Apple Pay</div>
+      </div>
+    </div>
+  );
+}
+
+/* 5 · KINETIC */
+function Kinetic(){
+  return (
+    <div className="scr c-kinetic">
+      <div className="notch"></div>
+      <SBar tone="#fff"/>
+      <div className="body">
+        <div className="top">
+          <span>HOLE 07 / PAR 3<br/>PEBBLE BEACH</span>
+          <span className="live"><i></i>LIVE</span>
+        </div>
+        <div className="mid">
+          <div className="lab">Ace pot · winner takes all</div>
+          <div className="big tn">$48<span className="acc">K</span></div>
+          <div className="meta">
+            <div className="r"><span>ENTRY</span><b>$10.00</b></div>
+            <div className="r"><span>FIELD</span><b className="tn">137 in</b></div>
+            <div className="r"><span>YOU PAY</span><b>once · 1 tap</b></div>
+          </div>
+        </div>
+        <div className="cta"><span className="sh"></span><span>I'M IN</span><span className="arrow">→</span></div>
+        <div className="foot">DOUBLE-CLICK TO CONFIRM WITH FACE ID</div>
+      </div>
+    </div>
+  );
+}
+
+function Board(){
+  return (
+    <DesignCanvas>
+      <DCSection id="moment" title="ACES · The signature moment" subtitle="“On the tee → live pot → one tap in.” Five aesthetic directions, same flow.">
+        <DCArtboard id="jackpot" label="1 · Jackpot — Vegas lottery" width={300} height={620}><Jackpot/></DCArtboard>
+        <DCArtboard id="bcast" label="2 · Broadcast — sportsbook feed" width={300} height={620}><Broadcast/></DCArtboard>
+        <DCArtboard id="club" label="3 · Clubhouse — fun with friends" width={300} height={620}><Clubhouse/></DCArtboard>
+        <DCArtboard id="heritage" label="4 · Heritage — members club" width={300} height={620}><Heritage/></DCArtboard>
+        <DCArtboard id="kinetic" label="5 · Kinetic — near zero-UI" width={300} height={620}><Kinetic/></DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Board/>);
+</script>
+</body>
+</html>

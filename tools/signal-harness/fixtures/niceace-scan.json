@@ -1,0 +1,88 @@
+{
+  "meta": {
+    "product": "NiceAce",
+    "product_tag": "niceace",
+    "run_label": "Sample run #2 (representative fixture)",
+    "scanned_at": "2026-06-05T20:30:00Z",
+    "previous_scan_at": "2026-05-29T20:30:00Z",
+    "sources": ["reddit: r/golf, r/golfclubs", "appstore_review: competitor golf apps"],
+    "note": "Representative output. The live scanner (signal-collect + signal-process) produces this exact report shape from real public data."
+  },
+  "counts": { "collected": 142, "pain": 58, "clusters": 4, "candidates": 4 },
+  "classification_breakdown": [
+    { "label": "pain_point", "n": 41 },
+    { "label": "feature_request", "n": 17 },
+    { "label": "praise", "n": 22 },
+    { "label": "question", "n": 19 },
+    { "label": "noise", "n": 31 },
+    { "label": "off_topic", "n": 12 }
+  ],
+  "raw_samples": [
+    { "source": "reddit", "title": "Aced #7 and have literally no proof", "snippet": "Made my first hole in one Saturday and there's no record anywhere. Group was on the next tee. Gutted.", "label": "pain_point", "confidence": 0.94 },
+    { "source": "reddit", "title": "Skins math after every round is exhausting", "snippet": "We spend 20 minutes in the parking lot working out who owes who. There has to be a better way.", "label": "pain_point", "confidence": 0.89 },
+    { "source": "appstore_review", "title": "Won't pay out", "snippet": "Entered a contest at my course, supposedly won, never saw a dime. Felt like a scam.", "label": "pain_point", "confidence": 0.91 },
+    { "source": "reddit", "title": "Wish there was a Venmo-style group pot", "snippet": "Would love to just throw $10 in a pot for nearest the pin and have it auto settle.", "label": "feature_request", "confidence": 0.86 },
+    { "source": "appstore_review", "title": "Love the GPS but...", "snippet": "Great rangefinder, but the betting games are clunky and never sync between phones.", "label": "feature_request", "confidence": 0.72 },
+    { "source": "reddit", "title": "Best courses in Monterey?", "snippet": "Heading out west next month, any must plays?", "label": "off_topic", "confidence": 0.95 }
+  ],
+  "themes": [
+    {
+      "title": "No proof / record of a hole-in-one",
+      "pain_score": 86,
+      "occurrence_count": 5,
+      "score_history": [{ "s": 61 }, { "s": 70 }, { "s": 74 }, { "s": 77 }, { "s": 86 }]
+    },
+    {
+      "title": "Settle-up after side bets is painful",
+      "pain_score": 72,
+      "occurrence_count": 4,
+      "score_history": [{ "s": 80 }, { "s": 79 }, { "s": 76 }, { "s": 72 }]
+    },
+    {
+      "title": "Distrust of contest payout legitimacy",
+      "pain_score": 68,
+      "occurrence_count": 3,
+      "score_history": [{ "s": 44 }, { "s": 56 }, { "s": 68 }]
+    },
+    {
+      "title": "Side-game scoring doesn't sync between phones",
+      "pain_score": 51,
+      "occurrence_count": 2,
+      "score_history": [{ "s": 49 }, { "s": 51 }]
+    }
+  ],
+  "candidates": [
+    {
+      "cluster_theme": "No proof / record of a hole-in-one",
+      "problem": "Golfers who ace a hole have no trusted record. Partners forget, there's nothing to show or verify later, and the biggest moment in the game evaporates.",
+      "proposed_solution": "Auto-mint a verifiable Ace Card (course, hole, date, witnesses) the instant an ace is confirmed; one-tap share to social.",
+      "representative_quotes": ["Made my first ace and there's no record anywhere", "Group was on the next tee, no proof"],
+      "pain_score": 86, "confidence": 81, "effort": "M",
+      "evidence": { "member_count": 14, "sources": ["reddit"] }
+    },
+    {
+      "cluster_theme": "Settle-up after side bets is painful",
+      "problem": "Groups lose track of who owes whom on skins/nassau and chasing payment after the round kills the vibe.",
+      "proposed_solution": "Auto-tallied net positions with a single 'request from group' settle button at the turn and after 18.",
+      "representative_quotes": ["20 minutes in the parking lot doing the math", "Always a mess figuring out who owes what"],
+      "pain_score": 72, "confidence": 74, "effort": "M",
+      "evidence": { "member_count": 11, "sources": ["reddit", "appstore_review"] }
+    },
+    {
+      "cluster_theme": "Distrust of contest payout legitimacy",
+      "problem": "Players hesitate to pay into on-course contests because they don't trust the payout will actually happen.",
+      "proposed_solution": "Show a reinsured-pot badge + public payout history + 'verified by NiceAce' provenance before the pay step.",
+      "representative_quotes": ["Supposedly won, never saw a dime", "Felt like a scam"],
+      "pain_score": 68, "confidence": 70, "effort": "S",
+      "evidence": { "member_count": 9, "sources": ["appstore_review", "reddit"] }
+    },
+    {
+      "cluster_theme": "Side-game scoring doesn't sync between phones",
+      "problem": "When a group tracks a money game, scores entered on one phone don't reliably appear on others, causing disputes.",
+      "proposed_solution": "Realtime shared scorecard: one source of truth, every player sees live updates.",
+      "representative_quotes": ["Never syncs between phones", "We end up with two different scorecards"],
+      "pain_score": 51, "confidence": 63, "effort": "L",
+      "evidence": { "member_count": 6, "sources": ["appstore_review"] }
+    }
+  ]
+}

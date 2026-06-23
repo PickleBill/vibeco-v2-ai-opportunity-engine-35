@@ -1,0 +1,19 @@
+{
+  "name": "courtana-mcp-server",
+  "version": "0.1.0",
+  "description": "Courtana organizational knowledge MCP server — shared memory and tools for all Claude Code sessions",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "npx tsx src/index.ts",
+    "dev": "npx tsx --watch src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@supabase/supabase-js": "^2.49.4"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

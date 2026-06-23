@@ -1,0 +1,47 @@
+name: Deploy preview to GitHub Pages
+
+# Manual-only (workflow_dispatch) so it never fails automatically.
+# ONE-TIME SETUP: repo Settings → Pages → Source = "GitHub Actions".
+# Then this can be run (Actions tab → this workflow → Run workflow, or ask
+# Claude to trigger it) to publish /aces to https://picklebill.github.io/vibeco/.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp -r aces _site/aces
+          cat > _site/index.html <<'EOF'
+          <!doctype html><html lang="en"><head><meta charset="utf-8">
+          <meta http-equiv="refresh" content="0; url=./aces/preview/index.html">
+          <title>NiceAce + Signal Mine — preview</title></head>
+          <body style="font-family:system-ui;background:#0b0a0f;color:#fff;padding:40px">
+          <a style="color:#c6ff3a" href="./aces/preview/index.html">Open the preview hub →</a>
+          </body></html>
+          EOF
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

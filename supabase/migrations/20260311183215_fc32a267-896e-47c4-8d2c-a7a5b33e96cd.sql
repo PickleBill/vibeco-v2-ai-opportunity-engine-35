@@ -1,0 +1,1 @@
+ALTER TABLE public.simulator_captures ADD COLUMN IF NOT EXISTS lovable_prompt text DEFAULT NULL;

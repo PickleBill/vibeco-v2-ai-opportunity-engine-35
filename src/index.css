@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Dark, matte charcoal base — no pure black/white */
+    --background: 222 18% 7%;
+    --foreground: 210 20% 92%;
+
+    --card: 222 16% 10%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 222 16% 10%;
+    --popover-foreground: 210 20% 92%;
+
+    /* Emerald accent */
+    --primary: 158 72% 45%;
+    --primary-foreground: 222 30% 8%;
+
+    --secondary: 222 14% 13%;
+    --secondary-foreground: 210 20% 92%;
+
+    --muted: 222 14% 14%;
+    --muted-foreground: 215 14% 62%;
+
+    --accent: 222 14% 14%;
+    --accent-foreground: 158 72% 45%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 222 30% 8%;
+
+    --border: 220 12% 18%;
+    --input: 220 12% 18%;
+    --ring: 158 72% 45%;
+
+    /* Violet — the single new accent, reserved for primary CTA + key emphasis */
+    --violet: 258 91% 57%;
+    --violet-foreground: 0 0% 100%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 222 18% 7%;
+    --sidebar-foreground: 210 20% 92%;
+    --sidebar-primary: 158 72% 45%;
+    --sidebar-primary-foreground: 222 30% 8%;
+    --sidebar-accent: 222 14% 14%;
+    --sidebar-accent-foreground: 158 72% 45%;
+    --sidebar-border: 220 12% 18%;
+    --sidebar-ring: 158 72% 45%;
+
+    /* Custom tokens */
+    --surface: 222 16% 10%;
+    --surface-elevated: 222 16% 13%;
+    --text-primary: 210 20% 92%;
+    --text-secondary: 215 14% 62%;
+    --text-muted: 215 12% 48%;
+    --accent-glow: 158 72% 45%;
+    --divider: 220 12% 18%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Albert Sans', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sora', system-ui, sans-serif;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Sora', system-ui, sans-serif;
+    letter-spacing: -0.03em;
+  }
+
+  .font-body {
+    font-family: 'Albert Sans', system-ui, sans-serif;
+  }
+
+  .shadow-warm {
+    box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.5);
+  }
+
+  .shadow-warm-lg {
+    box-shadow: 0 16px 48px -8px rgba(0, 0, 0, 0.6);
+  }
+
+  .shadow-violet {
+    box-shadow: 0 0 40px hsl(var(--violet) / 0.35);
+  }
+
+  .border-divider {
+    border-color: hsl(var(--divider));
+  }
+
+  .bg-surface {
+    background-color: hsl(var(--surface));
+  }
+
+  .bg-surface-elevated {
+    background-color: hsl(var(--surface-elevated));
+  }
+}
+
+/* Timeline slider custom thumb */
+.timeline-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  border: 2px solid hsl(var(--background));
+  box-shadow: 0 2px 8px hsl(var(--primary) / 0.3);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.timeline-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  box-shadow: 0 2px 12px hsl(var(--primary) / 0.4);
+}
+.timeline-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  border: 2px solid hsl(var(--background));
+  box-shadow: 0 2px 8px hsl(var(--primary) / 0.3);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.timeline-slider::-moz-range-thumb:hover {
+  transform: scale(1.25);
+  box-shadow: 0 2px 12px hsl(var(--primary) / 0.4);
+}
+
+/* Respect users who prefer reduced motion — neutralize transitions + animations.
+   This globally guards Framer Motion (which honors CSS) and all transition-* utilities. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

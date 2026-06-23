@@ -1,0 +1,201 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>NiceAce — Scan Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Albert+Sans:wght@400;500;600;700&family=Archivo:wght@700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box} body{margin:0;background:radial-gradient(1000px 600px at 50% -10%,#1a1622,#0b0a0f 60%);color:#fff;font-family:'Albert Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:960px;margin:0 auto;padding:40px 20px 80px}
+.eyebrow{display:flex;align-items:center;gap:8px;color:#c6ff3a;font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase}
+h1{font-family:'Archivo';font-weight:900;font-size:34px;margin:8px 0 2px}
+.sub{color:#9a97a6;font-size:14px}
+.banner{margin:16px 0 0;padding:10px 14px;border:1px solid #2f2c39;border-radius:12px;background:#16141d;color:#cdbf9a;font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:24px 0}
+.stat{border:1px solid #262b28;border-radius:14px;background:#121514;padding:14px}
+.stat b{font-family:'Archivo';font-weight:900;font-size:26px;display:block;line-height:1}
+.stat span{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a97a6;margin-top:6px;display:block}
+h2{font-family:'Sora';font-weight:700;font-size:18px;margin:34px 0 12px}
+.section-hint{color:#9a97a6;font-size:13px;font-weight:400;margin-left:8px}
+.card{border:1px solid #262b28;border-radius:16px;background:#121514;padding:16px;margin-bottom:12px}
+.cls{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:13px}
+.cls-l{width:120px;color:#cdcdd6}.cls-bar{flex:1;height:8px;background:#0e0d14;border-radius:5px;overflow:hidden}.cls-bar span{display:block;height:100%}.cls-n{width:30px;text-align:right;color:#9a97a6}
+table{width:100%;border-collapse:collapse}
+td{border-top:1px solid #21261f;padding:10px 8px;vertical-align:top;font-size:13px}
+.snip{color:#9a97a6;font-size:12px;margin-top:3px}
+.src{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}.src-reddit{background:rgba(255,107,94,.14);color:#ff8a3c}.src-appstore_review{background:rgba(54,224,166,.14);color:#36e0a6}
+.lbl{font-size:11px;font-weight:600;color:#cdcdd6}.conf{color:#9a97a6;font-size:11px}
+.grid-themes{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.theme-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.theme-title{font-weight:600;font-size:14px}
+.theme-meta{display:flex;align-items:center;gap:12px;margin-top:8px;font-size:12px;font-weight:700}
+.pain{font-family:'Archivo';font-weight:900;font-size:18px}.seen{margin-left:auto;color:#9a97a6;font-weight:400}
+.cand-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.cand-title{font-family:'Sora';font-weight:700;font-size:16px}
+.tags{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}.tag{font-size:11px;border:1px solid #2f2c39;border-radius:20px;padding:2px 8px;color:#cdcdd6}.tag.prio{background:#c6ff3a;color:#1a1310;border:0;font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}.k{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a97a6}.k.accent{color:#c6ff3a}.grid2 p{font-size:13px;margin:5px 0 0;line-height:1.45}
+.quotes{margin-top:12px;border:1px solid #21261f;background:#0e0d14;border-radius:10px;padding:10px}.q{font-size:12px;color:#bdbdc8;font-style:italic;margin:3px 0}.sources{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#6f6c7b;margin-top:6px}
+.roadmap{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.rm-col{border:1px solid #262b28;border-radius:14px;background:#121514;padding:12px;min-height:90px}
+.rm-head{font-family:'Sora';font-weight:700;font-size:14px;margin-bottom:8px}.rm-head span{color:#9a97a6;font-weight:400;font-size:11px;display:block}
+.rm-item{display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid #21261f}.rm-eff{margin-left:auto;color:#9a97a6}.rm-empty{color:#6f6c7b}
+.foot{margin-top:40px;color:#6f6c7b;font-size:12px;text-align:center}
+@media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}.grid2,.grid-themes,.roadmap{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+
+<div class="eyebrow">◎ Signal Mine · scan report</div>
+<h1>NiceAce — what the market is saying</h1>
+<div class="sub">Sample run #2 (representative fixture) · scanned 2026-06-05 · sources: reddit: r/golf, r/golfclubs · appstore_review: competitor golf apps</div>
+<div class="banner">ℹ️ Representative output. The live scanner (signal-collect + signal-process) produces this exact report shape from real public data.</div>
+
+<div class="stats">
+  <div class="stat"><b>142</b><span>Items collected</span></div>
+  <div class="stat"><b>58</b><span>Pain / requests</span></div>
+  <div class="stat"><b>4</b><span>Themes</span></div>
+  <div class="stat"><b>4</b><span>Candidates</span></div>
+</div>
+
+<h2>1 · What we ran <span class="section-hint">classification of everything collected</span></h2>
+<div class="card"><div class="cls"><span class="cls-l">pain_point</span>
+    <span class="cls-bar"><span style="width:29%;background:#c6ff3a"></span></span>
+    <span class="cls-n">41</span></div><div class="cls"><span class="cls-l">feature_request</span>
+    <span class="cls-bar"><span style="width:12%;background:#c6ff3a"></span></span>
+    <span class="cls-n">17</span></div><div class="cls"><span class="cls-l">praise</span>
+    <span class="cls-bar"><span style="width:15%;background:#2f2c39"></span></span>
+    <span class="cls-n">22</span></div><div class="cls"><span class="cls-l">question</span>
+    <span class="cls-bar"><span style="width:13%;background:#2f2c39"></span></span>
+    <span class="cls-n">19</span></div><div class="cls"><span class="cls-l">noise</span>
+    <span class="cls-bar"><span style="width:22%;background:#2f2c39"></span></span>
+    <span class="cls-n">31</span></div><div class="cls"><span class="cls-l">off_topic</span>
+    <span class="cls-bar"><span style="width:8%;background:#2f2c39"></span></span>
+    <span class="cls-n">12</span></div></div>
+
+<h2>2 · Raw signal <span class="section-hint">a sample of the actual posts/reviews</span></h2>
+<div class="card" style="padding:4px 12px"><table>
+  <tr>
+    <td><span class="src src-reddit">Reddit</span></td>
+    <td><b>Aced #7 and have literally no proof</b><div class="snip">Made my first hole in one Saturday and there's no record anywhere. Group was on the next tee. Gutted.</div></td>
+    <td><span class="lbl lbl-pain_point">pain_point</span><div class="conf">94%</div></td>
+  </tr>
+  <tr>
+    <td><span class="src src-reddit">Reddit</span></td>
+    <td><b>Skins math after every round is exhausting</b><div class="snip">We spend 20 minutes in the parking lot working out who owes who. There has to be a better way.</div></td>
+    <td><span class="lbl lbl-pain_point">pain_point</span><div class="conf">89%</div></td>
+  </tr>
+  <tr>
+    <td><span class="src src-appstore_review">App review</span></td>
+    <td><b>Won't pay out</b><div class="snip">Entered a contest at my course, supposedly won, never saw a dime. Felt like a scam.</div></td>
+    <td><span class="lbl lbl-pain_point">pain_point</span><div class="conf">91%</div></td>
+  </tr>
+  <tr>
+    <td><span class="src src-reddit">Reddit</span></td>
+    <td><b>Wish there was a Venmo-style group pot</b><div class="snip">Would love to just throw $10 in a pot for nearest the pin and have it auto settle.</div></td>
+    <td><span class="lbl lbl-feature_request">feature_request</span><div class="conf">86%</div></td>
+  </tr>
+  <tr>
+    <td><span class="src src-appstore_review">App review</span></td>
+    <td><b>Love the GPS but...</b><div class="snip">Great rangefinder, but the betting games are clunky and never sync between phones.</div></td>
+    <td><span class="lbl lbl-feature_request">feature_request</span><div class="conf">72%</div></td>
+  </tr>
+  <tr>
+    <td><span class="src src-reddit">Reddit</span></td>
+    <td><b>Best courses in Monterey?</b><div class="snip">Heading out west next month, any must plays?</div></td>
+    <td><span class="lbl lbl-off_topic">off_topic</span><div class="conf">95%</div></td>
+  </tr></table></div>
+
+<h2>3 · Themes &amp; trends <span class="section-hint">durable across scans (Pulse P1)</span></h2>
+<div class="grid-themes"><div class="card theme">
+    <div class="theme-top"><span class="theme-title">No proof / record of a hole-in-one</span><svg width="80" height="24" style="overflow:visible"><polyline points="0.0,24.0 20.0,15.4 40.0,11.5 60.0,8.6 80.0,0.0" fill="none" stroke="#ff6b5e" stroke-width="2"/></svg></div>
+    <div class="theme-meta">
+      <span class="pain" style="color:#ff6b5e">86</span>
+      <span style="color:#ff6b5e">▲ +9</span>
+      <span class="seen">seen 5×</span>
+    </div>
+  </div><div class="card theme">
+    <div class="theme-top"><span class="theme-title">Settle-up after side bets is painful</span><svg width="80" height="24" style="overflow:visible"><polyline points="0.0,0.0 26.7,3.0 53.3,12.0 80.0,24.0" fill="none" stroke="#36e0a6" stroke-width="2"/></svg></div>
+    <div class="theme-meta">
+      <span class="pain" style="color:#f5c451">72</span>
+      <span style="color:#36e0a6">▼ -4</span>
+      <span class="seen">seen 4×</span>
+    </div>
+  </div><div class="card theme">
+    <div class="theme-top"><span class="theme-title">Distrust of contest payout legitimacy</span><svg width="80" height="24" style="overflow:visible"><polyline points="0.0,24.0 40.0,12.0 80.0,0.0" fill="none" stroke="#ff6b5e" stroke-width="2"/></svg></div>
+    <div class="theme-meta">
+      <span class="pain" style="color:#f5c451">68</span>
+      <span style="color:#ff6b5e">▲ +12</span>
+      <span class="seen">seen 3×</span>
+    </div>
+  </div><div class="card theme">
+    <div class="theme-top"><span class="theme-title">Side-game scoring doesn't sync between phones</span><svg width="80" height="24" style="overflow:visible"><polyline points="0.0,24.0 80.0,0.0" fill="none" stroke="#ff6b5e" stroke-width="2"/></svg></div>
+    <div class="theme-meta">
+      <span class="pain" style="color:#9a97a6">51</span>
+      <span style="color:#ff6b5e">▲ +2</span>
+      <span class="seen">seen 2×</span>
+    </div>
+  </div></div>
+
+<h2>4 · Feature candidates <span class="section-hint">ranked by pain × confidence</span></h2>
+<div class="card cand">
+  <div class="cand-top">
+    <span class="pain" style="color:#ff6b5e">86</span>
+    <span class="cand-title">No proof / record of a hole-in-one</span>
+    <span class="tags"><span class="tag">81% conf</span><span class="tag">effort M</span><span class="tag">14 signals</span><span class="tag prio">P70</span></span>
+  </div>
+  <div class="grid2">
+    <div><div class="k">Problem</div><p>Golfers who ace a hole have no trusted record. Partners forget, there's nothing to show or verify later, and the biggest moment in the game evaporates.</p></div>
+    <div><div class="k accent">Proposed feature</div><p>Auto-mint a verifiable Ace Card (course, hole, date, witnesses) the instant an ace is confirmed; one-tap share to social.</p></div>
+  </div>
+  <div class="quotes"><div class="q">“Made my first ace and there's no record anywhere”</div><div class="q">“Group was on the next tee, no proof”</div>
+    <div class="sources">sources: reddit</div></div>
+</div><div class="card cand">
+  <div class="cand-top">
+    <span class="pain" style="color:#f5c451">72</span>
+    <span class="cand-title">Settle-up after side bets is painful</span>
+    <span class="tags"><span class="tag">74% conf</span><span class="tag">effort M</span><span class="tag">11 signals</span><span class="tag prio">P53</span></span>
+  </div>
+  <div class="grid2">
+    <div><div class="k">Problem</div><p>Groups lose track of who owes whom on skins/nassau and chasing payment after the round kills the vibe.</p></div>
+    <div><div class="k accent">Proposed feature</div><p>Auto-tallied net positions with a single 'request from group' settle button at the turn and after 18.</p></div>
+  </div>
+  <div class="quotes"><div class="q">“20 minutes in the parking lot doing the math”</div><div class="q">“Always a mess figuring out who owes what”</div>
+    <div class="sources">sources: reddit · appstore_review</div></div>
+</div><div class="card cand">
+  <div class="cand-top">
+    <span class="pain" style="color:#f5c451">68</span>
+    <span class="cand-title">Distrust of contest payout legitimacy</span>
+    <span class="tags"><span class="tag">70% conf</span><span class="tag">effort S</span><span class="tag">9 signals</span><span class="tag prio">P48</span></span>
+  </div>
+  <div class="grid2">
+    <div><div class="k">Problem</div><p>Players hesitate to pay into on-course contests because they don't trust the payout will actually happen.</p></div>
+    <div><div class="k accent">Proposed feature</div><p>Show a reinsured-pot badge + public payout history + 'verified by NiceAce' provenance before the pay step.</p></div>
+  </div>
+  <div class="quotes"><div class="q">“Supposedly won, never saw a dime”</div><div class="q">“Felt like a scam”</div>
+    <div class="sources">sources: appstore_review · reddit</div></div>
+</div><div class="card cand">
+  <div class="cand-top">
+    <span class="pain" style="color:#9a97a6">51</span>
+    <span class="cand-title">Side-game scoring doesn't sync between phones</span>
+    <span class="tags"><span class="tag">63% conf</span><span class="tag">effort L</span><span class="tag">6 signals</span><span class="tag prio">P32</span></span>
+  </div>
+  <div class="grid2">
+    <div><div class="k">Problem</div><p>When a group tracks a money game, scores entered on one phone don't reliably appear on others, causing disputes.</p></div>
+    <div><div class="k accent">Proposed feature</div><p>Realtime shared scorecard: one source of truth, every player sees live updates.</p></div>
+  </div>
+  <div class="quotes"><div class="q">“Never syncs between phones”</div><div class="q">“We end up with two different scorecards”</div>
+    <div class="sources">sources: appstore_review</div></div>
+</div>
+
+<h2>5 · Suggested roadmap <span class="section-hint">auto-bucketed; a CPO confirms</span></h2>
+<div class="roadmap">
+  <div class="rm-col">
+  <div class="rm-head">Now <span>high priority · low/med effort</span></div>
+  <div class="rm-item"><span class="pain" style="color:#ff6b5e">86</span> No proof / record of a hole-in-one <span class="rm-eff">M</span></div>
+</div>
+  <div class="rm-col">
+  <div class="rm-head">Next <span>solid signal</span></div>
+  <div class="rm-item"><span class="pain" style="color:#f5c451">72</span> Settle-up after side bets is painful <span class="rm-eff">M</span></div><div class="rm-item"><span class="pain" style="color:#f5c451">68</span> Distrust of contest payout legitimacy <span class="rm-eff">S</span></div>
+</div>
+  <div class="rm-col">
+  <div class="rm-head">Later <span>watch / high effort</span></div>
+  <div class="rm-item"><span class="pain" style="color:#9a97a6">51</span> Side-game scoring doesn't sync between phones <span class="rm-eff">L</span></div>
+</div>
+</div>
+
+<div class="foot">Generated by the Signal Mine harness · tools/signal-harness/generate-report.mjs · NiceAce</div>
+</div></body></html>

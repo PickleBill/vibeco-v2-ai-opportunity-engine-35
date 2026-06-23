@@ -1,0 +1,1 @@
+ALTER TABLE public.simulator_captures ADD COLUMN landing_page_html text;

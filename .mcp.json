@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "courtana": {
+      "command": "npx",
+      "args": ["tsx", "/home/user/vibeco/courtana-mcp-server/src/index.ts"],
+      "env": {
+        "SUPABASE_URL": "https://ulgoahsxkrkzoquvntei.supabase.co",
+        "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZ29haHN4a3Jrem9xdXZudGVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxOTk4MTUsImV4cCI6MjA4ODc3NTgxNX0.UKGLnqSE0OaYrGKekZtYjhamOfvnVhkATk5dwla8j0k",
+        "OPENAI_API_KEY": "sk-PASTE-YOUR-OPENAI-KEY-HERE-FOR-SEMANTIC-SEARCH"
+      }
+    }
+  }
+}

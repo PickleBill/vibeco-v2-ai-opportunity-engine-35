@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Aces — Prototype</title>
+<link rel="stylesheet" href="aces.css"/>
+<link rel="stylesheet" href="aces-theme-broadcast.css"/>
+</head>
+<body>
+<div class="switcher">
+  <span class="lbl">Look</span>
+  <div class="grp">
+    <button class="theme-btn on" data-theme="jackpot">Jackpot</button>
+    <button class="theme-btn" data-theme="broadcast">Broadcast</button>
+  </div>
+  <span class="sep"></span>
+  <span class="lbl">Button</span>
+  <div class="grp">
+    <button class="cta-btn mini on" data-cta="classic">Classic</button>
+    <button class="cta-btn mini" data-cta="kinetic">Kinetic</button>
+  </div>
+  <span class="sep"></span>
+  <button class="cta-btn mini" id="restartBtn">↺ Restart</button>
+</div>
+<div class="device theme-jackpot" id="device">
+  <div class="screen">
+    <div class="notch"></div>
+
+    <!-- ============ VIEW 1 · ARRIVE (post-QR scan) ============ -->
+    <div class="view active" id="v-arrive">
+      <div class="aurora"></div>
+      <div class="rays"></div>
+      <div class="statusbar"><span>9:41</span><span class="right">≣ ⤢ ▮</span></div>
+      <div class="view-body">
+        <div class="crse">
+          <div class="name">Pebble Beach<small>Golf Links</small></div>
+          <span class="live"><i></i>LIVE</span>
+        </div>
+
+        <div class="scanned">✓ QR scanned · you're on the tee</div>
+
+        <div class="holecard">
+          <div class="htag">The Seventh</div>
+          <div class="hbig">HOLE 7 · PAR 3</div>
+          <div class="hmeta tn">106 YDS · WIND 8MPH SW</div>
+        </div>
+
+        <div class="potblock">
+          <div class="plabel">★ TODAY'S ACE POT · WINNER TAKES ALL ★</div>
+          <div class="pot tn" id="arrivePot">$48,750</div>
+          <div class="psub tn" id="arriveField">137 in today · grows $10 every entry</div>
+        </div>
+
+        <div class="headline">$10 IN. ACE THE HOLE.<br/><b>WIN IT ALL.</b></div>
+
+        <div class="ctabox">
+          <button class="cta" id="enterBtn"><span class="sheen"></span>I'M IN · $10 →</button>
+          <div class="paynote">  Apple Pay · entered in 3 seconds · no app to install</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ VIEW 2 · PAY SHEET ============ -->
+    <div class="view" id="v-pay">
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="payrow">
+          <div class="logo">A</div>
+          <div class="who"><b>Aces · Hole 7 Pot</b><small>Pebble Beach Golf Links</small></div>
+          <div class="amt tn">$10</div>
+        </div>
+        <div class="payline"><span class="muted">Pay with</span><span> Apple Pay · ···· 4029</span></div>
+        <div class="payline"><span class="muted">Entry</span><span>1 hole-in-one ticket</span></div>
+        <div class="payline"><span class="muted">If you ace it</span><span style="color:#f5c451;">You win the full pot</span></div>
+        <div class="faceid" id="faceid">
+          <div style="position:relative; display:flex; align-items:center; justify-content:center;">
+            <svg class="ring" viewBox="0 0 64 64"><circle class="track" cx="32" cy="32" r="29"/><circle class="prog" cx="32" cy="32" r="29"/></svg>
+            <span class="ficon" id="ficon">😊</span>
+          </div>
+          <div class="fitxt" id="fitxt">Double-click side button to confirm</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ VIEW 3 · CELEBRATE ============ -->
+    <div class="view" id="v-celebrate">
+      <div class="aurora"></div>
+      <div class="confetti" id="confetti"></div>
+      <div class="view-body">
+        <div class="bigcheck">
+          <svg viewBox="0 0 48 48" fill="none"><path d="M12 25l8 8 16-18" stroke="#062611" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h1>YOU'RE IN!</h1>
+        <div class="entry">Entry <b id="entryNo">#138</b> · Hole 7 · Pebble Beach</div>
+        <div class="potmini">
+          <div class="pl">★ THE POT IS NOW ★</div>
+          <div class="pot tn" id="celebratePot">$48,760</div>
+          <div class="grew">▲ you pushed it up <b style="color:#39ff88">$10</b></div>
+        </div>
+        <div class="cont">
+          <button class="cta" id="toLiveBtn"><span class="sheen"></span>SEE THE LIVE POT →</button>
+          <button class="cta ghost" id="aceTestBtn" style="margin-top:8px;">⛳ Simulate: I aced it</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ VIEW 4 · LIVE DASHBOARD ============ -->
+    <div class="view" id="v-live">
+      <div class="view-body">
+        <div class="lscroll" id="lscroll">
+          <div class="ltop">
+            <div class="brand">ACES<b>.</b></div>
+            <span class="live"><i></i>LIVE · HOLE 7</span>
+          </div>
+
+          <div class="lhero">
+            <div class="rays" style="opacity:.6;"></div>
+            <div class="pl">★ ACE POT · WINNER TAKES ALL ★</div>
+            <div class="pot tn" id="livePot">$48,760</div>
+            <div class="grow tn" id="liveGrow"><span class="up">▲ +$120</span> in the last hour · 138 in</div>
+          </div>
+
+          <div class="youchip">
+            <div class="badge">IN</div>
+            <div class="txt"><b>You're entered</b><small>Ticket #138 · good all day on Hole 7</small></div>
+            <div class="stat"><b class="tn">1</b><small>your odds</small></div>
+          </div>
+
+          <div class="sect"><h3>Live on the tee</h3><span class="live"><i></i></span></div>
+          <div class="feed" id="feed"></div>
+
+          <div class="sect"><h3>This month's aces</h3><a href="#">Trophy room →</a></div>
+          <div class="board">
+            <div class="brow top1"><span class="rk">1</span><span class="av" style="background:#f5c451;color:#1b1a20;">SW</span><span class="nm">Sam W.</span><span class="ct">won <b>$920</b></span></div>
+            <div class="brow"><span class="rk">2</span><span class="av" style="background:#3b7dd8;">DR</span><span class="nm">Dev R.</span><span class="ct">won <b>$640</b></span></div>
+            <div class="brow"><span class="rk">3</span><span class="av" style="background:#9a5cd0;">MK</span><span class="nm">Maria K.</span><span class="ct">won <b>$415</b></span></div>
+          </div>
+
+          <div class="share">
+            <button id="shareBtn">⤴ Invite your foursome</button>
+            <button class="acewin" id="aceBtn">⛳ I aced it</button>
+          </div>
+        </div>
+
+        <div class="tabbar">
+          <div class="tab on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 7v11a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1V9z"/></svg>Pot</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>Friends</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16l-2-9 5 4 4-7 4 7 5-4-2 9z"/></svg>Trophies</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>You</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ ACE WIN OVERLAY ============ -->
+    <div id="aceOverlay">
+      <div class="confetti" id="confetti2"></div>
+      <div class="trophy">🏆</div>
+      <h1>HOLE IN ONE!</h1>
+      <div class="won pot tn" id="wonAmt">$48,760</div>
+      <p>Verified by Aces. The whole pot is yours — payout hits your account tonight. The course is buzzing.</p>
+      <button class="cta" id="aceDone" style="max-width:260px;"><span class="sheen"></span>CLAIM IT →</button>
+    </div>
+
+    <div class="homeind"></div>
+  </div>
+</div>
+
+<script src="aces.js"></script>
+</body>
+</html>

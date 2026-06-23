@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>NiceAce — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Albert+Sans:wght@400;500;600;700&family=Archivo:wght@600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+/* ════════════════════════════════════════════════════════════════════════
+   NiceAce — faithful reconstruction of the Aces "signature moment" prototype.
+   Flow:  Arrive (post-QR) → Pay (Face ID) → Celebrate → Live Pot → Ace win.
+   Two looks: Jackpot (Vegas, gold) · Broadcast (sportsbook feed).
+   CTA styles: Classic · Kinetic. Single self-contained file, vanilla JS.
+   Source design: /aces/design/source/Aces-Prototype.html (+ Concept Board)
+   ════════════════════════════════════════════════════════════════════════ */
+:root{
+  --gold:#f5c451; --gold-2:#ffe9a8; --green:#39ff88; --bcast:#37d66b;
+  --ink:#0b0a0f; --paper:#f6f4ef;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:radial-gradient(1200px 700px at 50% -10%, #1a1622, #0b0a0f 60%);
+  font-family:'Albert Sans',system-ui,sans-serif; color:#fff;
+  display:flex; flex-direction:column; align-items:center; gap:18px; padding:22px 12px 40px;
+  -webkit-font-smoothing:antialiased;
+}
+.tn{font-variant-numeric:tabular-nums; font-feature-settings:"tnum"}
+::-webkit-scrollbar{width:0;height:0}
+
+/* ── Switcher (prototype chrome) ───────────────────────────────────────── */
+.switcher{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+  background:#16141d;border:1px solid #2a2733;border-radius:14px;padding:8px 12px}
+.switcher .lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8d8a98}
+.switcher .grp{display:flex;background:#0e0d14;border:1px solid #2a2733;border-radius:10px;padding:3px}
+.theme-btn,.cta-btn{font-family:inherit;border:0;background:transparent;color:#b9b6c4;
+  padding:6px 12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;transition:.15s}
+.theme-btn.on,.cta-btn.on{background:var(--gold);color:#1a1622}
+.cta-btn.mini{font-size:12px;padding:6px 10px}
+#restartBtn{border:1px solid #2a2733}
+.sep{width:1px;height:20px;background:#2a2733}
+
+/* ── Device frame ──────────────────────────────────────────────────────── */
+.device{width:340px;max-width:94vw}
+.screen{position:relative;aspect-ratio:340/720;border-radius:46px;overflow:hidden;
+  background:#0b0a0f;border:1px solid #2a2733;
+  box-shadow:0 40px 120px -30px rgba(0,0,0,.9),0 0 0 9px #15131c,0 0 0 10px #2a2733}
+.notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:120px;height:26px;
+  background:#000;border-radius:0 0 16px 16px;z-index:40}
+.homeind{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:120px;height:5px;
+  border-radius:3px;background:rgba(255,255,255,.5);z-index:40}
+.statusbar{display:flex;justify-content:space-between;align-items:center;padding:16px 26px 0;
+  font-size:13px;font-weight:600;letter-spacing:.02em}
+.statusbar .right{letter-spacing:.12em}
+
+/* ── Views ─────────────────────────────────────────────────────────────── */
+.view{position:absolute;inset:0;opacity:0;visibility:hidden;transform:translateY(8px);
+  transition:opacity .4s ease,transform .4s ease;display:flex;flex-direction:column}
+.view.active{opacity:1;visibility:visible;transform:none}
+.view-body{flex:1;display:flex;flex-direction:column;padding:14px 22px 30px;gap:14px;min-height:0}
+
+/* atmosphere */
+.aurora{position:absolute;inset:-30% -30% auto -30%;height:60%;z-index:0;pointer-events:none;
+  background:radial-gradient(60% 80% at 50% 0%,rgba(245,196,81,.28),transparent 70%);
+  filter:blur(10px)}
+.rays{position:absolute;top:-10%;left:50%;width:160%;height:80%;transform:translateX(-50%);z-index:0;
+  pointer-events:none;opacity:.5;
+  background:repeating-conic-gradient(from 0deg at 50% 0,rgba(245,196,81,.16) 0 7deg,transparent 7deg 16deg);
+  -webkit-mask:radial-gradient(60% 100% at 50% 0,#000,transparent 70%);
+  mask:radial-gradient(60% 100% at 50% 0,#000,transparent 70%);animation:spin 60s linear infinite}
+@keyframes spin{to{transform:translateX(-50%) rotate(360deg)}}
+
+/* course header */
+.crse{display:flex;justify-content:space-between;align-items:center;position:relative;z-index:2}
+.crse .name{font-family:'Sora';font-weight:800;font-size:18px;line-height:1}
+.crse .name small{display:block;font-family:'Albert Sans';font-weight:500;font-size:11px;
+  color:#a9a6b4;letter-spacing:.08em;text-transform:uppercase;margin-top:3px}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.12em;
+  color:var(--green)}
+.live i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);
+  animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.scanned{position:relative;z-index:2;align-self:flex-start;font-size:12px;font-weight:600;color:#cfe9d6;
+  background:rgba(57,255,136,.12);border:1px solid rgba(57,255,136,.3);padding:6px 12px;border-radius:20px}
+
+.holecard{position:relative;z-index:2;text-align:center;padding:8px 0 2px}
+.holecard .htag{font-family:'Sora';font-style:italic;color:var(--gold-2);font-weight:600;font-size:13px;
+  letter-spacing:.04em}
+.holecard .hbig{font-family:'Archivo';font-weight:900;font-size:26px;letter-spacing:.02em;margin-top:2px}
+.holecard .hmeta{font-size:11px;color:#a9a6b4;letter-spacing:.12em;margin-top:4px}
+
+/* the pot */
+.potblock{position:relative;z-index:2;text-align:center;border-radius:22px;padding:20px 14px;
+  background:linear-gradient(180deg,rgba(245,196,81,.10),rgba(245,196,81,.02));
+  border:1px solid rgba(245,196,81,.28);overflow:hidden}
+.potblock::before{content:"";position:absolute;inset:0;border-radius:22px;padding:1px;
+  background:linear-gradient(120deg,transparent,rgba(245,196,81,.6),transparent);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;opacity:.6}
+.plabel{font-size:10px;font-weight:800;letter-spacing:.22em;color:var(--gold);text-transform:uppercase}
+.pot{font-family:'Archivo';font-weight:900;font-size:46px;line-height:1;margin:8px 0 4px;
+  background:linear-gradient(180deg,#fff6df,var(--gold) 60%,#c9952c);-webkit-background-clip:text;
+  background-clip:text;color:transparent;text-shadow:0 2px 30px rgba(245,196,81,.35)}
+.psub{font-size:11.5px;color:#cdbf9a}
+
+.headline{position:relative;z-index:2;text-align:center;font-family:'Archivo';font-weight:800;
+  font-size:21px;line-height:1.12;letter-spacing:.01em}
+.headline b{color:var(--gold)}
+
+/* CTA */
+.ctabox{position:relative;z-index:2;margin-top:auto}
+.cta{position:relative;width:100%;border:0;cursor:pointer;font-family:'Sora';font-weight:800;
+  font-size:16px;letter-spacing:.02em;color:#1a1310;border-radius:16px;padding:16px;overflow:hidden;
+  background:linear-gradient(180deg,var(--gold-2),var(--gold));
+  box-shadow:0 10px 30px -8px rgba(245,196,81,.6);transition:transform .12s}
+.cta:active{transform:scale(.98)}
+.cta.ghost{background:transparent;color:#e9e6f0;border:1px solid #34313d;box-shadow:none}
+.cta .sheen{position:absolute;top:0;left:-60%;width:40%;height:100%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.65),transparent);
+  transform:skewX(-18deg);animation:sheen 3.2s ease-in-out infinite}
+@keyframes sheen{0%,100%{left:-60%}45%,55%{left:120%}}
+.paynote{text-align:center;font-size:11px;color:#a9a6b4;margin-top:9px}
+
+/* kinetic CTA variant */
+.device.cta-kinetic .cta{border-radius:6px;background:#fff;color:#0b0a0f;letter-spacing:.18em;
+  text-transform:uppercase;font-size:14px}
+.device.cta-kinetic .cta .sheen{display:none}
+.device.cta-kinetic .cta::after{content:"";position:absolute;inset:0;border:2px solid var(--gold);
+  border-radius:6px;animation:flick 1.6s steps(1) infinite}
+@keyframes flick{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ── Pay sheet ─────────────────────────────────────────────────────────── */
+#v-pay{justify-content:flex-end;background:rgba(0,0,0,.4)}
+.sheet{background:#1c1a24;border-radius:26px 26px 0 0;padding:14px 20px 30px;
+  border-top:1px solid #2f2c39;animation:rise .35s ease}
+@keyframes rise{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.grab{width:40px;height:5px;border-radius:3px;background:#403d4a;margin:2px auto 16px}
+.payrow{display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid #2f2c39}
+.payrow .logo{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;
+  font-family:'Archivo';font-weight:900;font-size:20px;background:var(--gold);color:#1a1310}
+.payrow .who b{font-size:14px}.payrow .who small{display:block;color:#a9a6b4;font-size:11px}
+.payrow .amt{margin-left:auto;font-family:'Archivo';font-weight:800;font-size:20px}
+.payline{display:flex;justify-content:space-between;font-size:13px;padding:11px 0;border-bottom:1px solid #232029}
+.payline .muted{color:#9a97a6}
+.faceid{margin-top:18px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer}
+.ring{width:64px;height:64px;transform:rotate(-90deg)}
+.ring .track{fill:none;stroke:#2f2c39;stroke-width:4}
+.ring .prog{fill:none;stroke:var(--gold);stroke-width:4;stroke-linecap:round;
+  stroke-dasharray:182;stroke-dashoffset:182;transition:stroke-dashoffset .9s linear}
+.faceid.go .prog{stroke-dashoffset:0}
+.ficon{position:absolute;font-size:24px}
+.fitxt{font-size:12px;color:#a9a6b4}
+
+/* ── Celebrate ─────────────────────────────────────────────────────────── */
+#v-celebrate .view-body{justify-content:center;text-align:center;align-items:center}
+.bigcheck{width:78px;height:78px;border-radius:50%;display:grid;place-items:center;
+  background:linear-gradient(180deg,var(--gold-2),var(--gold));box-shadow:0 0 50px rgba(245,196,81,.5);
+  animation:pop .4s cubic-bezier(.2,.9,.3,1.4) both}
+.bigcheck svg{width:42px;height:42px}
+@keyframes pop{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
+#v-celebrate h1{font-family:'Archivo';font-weight:900;font-size:34px;margin:6px 0 0;letter-spacing:.02em}
+.entry{font-size:13px;color:#cdbf9a}
+.potmini{margin-top:8px;border:1px solid rgba(245,196,81,.28);border-radius:18px;padding:16px 22px;
+  background:rgba(245,196,81,.06)}
+.potmini .pl{font-size:10px;font-weight:800;letter-spacing:.2em;color:var(--gold)}
+.potmini .pot{font-size:38px;margin:6px 0 4px}
+.grew{font-size:12px;color:#cdbf9a}
+.cont{width:100%;margin-top:18px}
+
+/* ── Live dashboard ────────────────────────────────────────────────────── */
+#v-live .view-body{padding:0}
+.lscroll{flex:1;overflow-y:auto;padding:14px 20px 84px;display:flex;flex-direction:column;gap:14px}
+.ltop{display:flex;justify-content:space-between;align-items:center}
+.brand{font-family:'Archivo';font-weight:900;font-size:22px;letter-spacing:.04em}
+.brand b{color:var(--gold)}
+.lhero{position:relative;text-align:center;border-radius:22px;padding:22px 14px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(245,196,81,.12),rgba(245,196,81,.02));
+  border:1px solid rgba(245,196,81,.28)}
+.lhero .pl{position:relative;z-index:2;font-size:10px;font-weight:800;letter-spacing:.2em;color:var(--gold)}
+.lhero .pot{position:relative;z-index:2;font-size:42px;margin:8px 0 4px}
+.grow{position:relative;z-index:2;font-size:11.5px;color:#cdbf9a}
+.grow .up{color:var(--green);font-weight:700}
+.youchip{display:flex;align-items:center;gap:12px;border:1px solid #2f2c39;border-radius:16px;padding:12px 14px;
+  background:#16141d}
+.youchip .badge{font-family:'Sora';font-weight:800;font-size:12px;color:#1a1310;background:var(--green);
+  padding:6px 10px;border-radius:8px}
+.youchip .txt b{font-size:13px}.youchip .txt small{display:block;color:#a9a6b4;font-size:11px}
+.youchip .stat{margin-left:auto;text-align:center}
+.youchip .stat b{font-family:'Archivo';font-weight:800;font-size:18px;display:block}
+.youchip .stat small{color:#a9a6b4;font-size:10px}
+.sect{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
+.sect h3{font-family:'Sora';font-weight:700;font-size:14px;margin:0}
+.sect a{color:var(--gold);font-size:12px;font-weight:600;text-decoration:none}
+.feed{display:flex;flex-direction:column;gap:8px}
+.frow{display:flex;align-items:center;gap:10px;font-size:13px;background:#141219;border:1px solid #232029;
+  border-radius:12px;padding:10px 12px;animation:rise .35s ease}
+.frow .fd{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.frow b{font-weight:700}
+.board{display:flex;flex-direction:column;gap:8px}
+.brow{display:flex;align-items:center;gap:10px;background:#141219;border:1px solid #232029;border-radius:12px;
+  padding:10px 12px;font-size:13px}
+.brow.top1{border-color:rgba(245,196,81,.4);background:rgba(245,196,81,.06)}
+.brow .rk{width:18px;text-align:center;color:#8d8a98;font-weight:700}
+.brow .av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff}
+.brow .nm{font-weight:600}.brow .ct{margin-left:auto;color:#a9a6b4}.brow .ct b{color:#fff}
+.share{display:flex;gap:10px;margin-top:4px}
+.share button{flex:1;font-family:'Sora';font-weight:700;font-size:13px;border-radius:14px;padding:13px;cursor:pointer;
+  border:1px solid #34313d;background:#16141d;color:#e9e6f0}
+.share .acewin{background:linear-gradient(180deg,var(--gold-2),var(--gold));color:#1a1310;border:0}
+.tabbar{position:absolute;bottom:0;left:0;right:0;display:flex;background:rgba(13,12,18,.92);
+  border-top:1px solid #232029;backdrop-filter:blur(8px);padding:8px 6px max(env(safe-area-inset-bottom),14px)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:#6f6c7b}
+.tab.on{color:var(--gold)}
+.tab svg{width:20px;height:20px}
+
+/* ── Ace win overlay ───────────────────────────────────────────────────── */
+#aceOverlay{position:absolute;inset:0;z-index:60;display:none;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;gap:8px;padding:30px;
+  background:radial-gradient(80% 60% at 50% 30%,#2a2113,#0b0a0f)}
+#aceOverlay.show{display:flex;animation:fade .4s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+#aceOverlay .trophy{font-size:60px;animation:pop .5s cubic-bezier(.2,.9,.3,1.4) both}
+#aceOverlay h1{font-family:'Archivo';font-weight:900;font-size:34px;margin:4px 0 0}
+#aceOverlay .won{font-size:50px;margin:6px 0}
+#aceOverlay p{font-size:13px;color:#cdbf9a;max-width:260px;line-height:1.5}
+
+/* confetti */
+.confetti{position:absolute;inset:0;z-index:50;pointer-events:none;overflow:hidden}
+.confetti i{position:absolute;top:-10%;width:8px;height:14px;border-radius:2px;opacity:.95;
+  animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(120vh) rotate(720deg)}}
+
+/* ════ BROADCAST theme overrides (sportsbook feed) ════ */
+.device.theme-broadcast .screen{background:#070b0a}
+.device.theme-broadcast .aurora{background:radial-gradient(60% 80% at 50% 0,rgba(55,214,107,.2),transparent 70%)}
+.device.theme-broadcast .rays{background:linear-gradient(transparent 0,transparent),
+  repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0 1px,transparent 1px 26px),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0 1px,transparent 1px 26px);
+  -webkit-mask:none;mask:none;animation:none;opacity:.5;width:100%;left:0;transform:none;top:0;height:100%}
+.device.theme-broadcast{--gold:#37d66b;--gold-2:#7ef0a6}
+.device.theme-broadcast .holecard .htag{font-style:normal;letter-spacing:.18em;text-transform:uppercase;color:#7ef0a6}
+.device.theme-broadcast .pot,.device.theme-broadcast .brand b{
+  background:linear-gradient(180deg,#eafff2,#37d66b 60%,#1c9c4f);-webkit-background-clip:text;background-clip:text;color:transparent}
+.device.theme-broadcast .potblock,.device.theme-broadcast .lhero,.device.theme-broadcast .potmini{
+  border-color:rgba(55,214,107,.3);background:linear-gradient(180deg,rgba(55,214,107,.08),rgba(55,214,107,.02))}
+.device.theme-broadcast .cta{background:linear-gradient(180deg,#7ef0a6,#37d66b);box-shadow:0 10px 30px -8px rgba(55,214,107,.6)}
+.device.theme-broadcast .plabel,.device.theme-broadcast .lhero .pl,.device.theme-broadcast .potmini .pl,
+.device.theme-broadcast .holecard .htag{color:#7ef0a6}
+.device.theme-broadcast .headline b{color:#7ef0a6}
+.device.theme-broadcast .bigcheck{background:linear-gradient(180deg,#7ef0a6,#37d66b)}
+.device.theme-broadcast .payrow .logo,.device.theme-broadcast .youchip .badge{background:#37d66b}
+</style>
+</head>
+<body>
+
+<div class="switcher">
+  <span class="lbl">Look</span>
+  <div class="grp">
+    <button class="theme-btn on" data-theme="jackpot">Jackpot</button>
+    <button class="theme-btn" data-theme="broadcast">Broadcast</button>
+  </div>
+  <span class="sep"></span>
+  <span class="lbl">Button</span>
+  <div class="grp">
+    <button class="cta-btn mini on" data-cta="classic">Classic</button>
+    <button class="cta-btn mini" data-cta="kinetic">Kinetic</button>
+  </div>
+  <span class="sep"></span>
+  <button class="cta-btn mini" id="restartBtn">↺ Restart</button>
+</div>
+
+<div class="device theme-jackpot cta-classic" id="device">
+  <div class="screen">
+    <div class="notch"></div>
+
+    <!-- ARRIVE -->
+    <div class="view active" id="v-arrive">
+      <div class="aurora"></div><div class="rays"></div>
+      <div class="statusbar"><span>9:41</span><span class="right">5G ▦ ▮</span></div>
+      <div class="view-body">
+        <div class="crse">
+          <div class="name">Pebble Beach<small>Golf Links</small></div>
+          <span class="live"><i></i>LIVE</span>
+        </div>
+        <div class="scanned">✓ QR scanned · you're on the tee</div>
+        <div class="holecard">
+          <div class="htag">The Seventh</div>
+          <div class="hbig">HOLE 7 · PAR 3</div>
+          <div class="hmeta tn">106 YDS · WIND 8MPH SW</div>
+        </div>
+        <div class="potblock">
+          <div class="plabel">★ Today's Ace Pot · Winner Takes All ★</div>
+          <div class="pot tn" id="arrivePot">$48,750</div>
+          <div class="psub tn" id="arriveField">137 in today · grows $10 every entry</div>
+        </div>
+        <div class="headline">$10 IN. ACE THE HOLE.<br/><b>WIN IT ALL.</b></div>
+        <div class="ctabox">
+          <button class="cta" id="enterBtn"><span class="sheen"></span>I'M IN · $10 →</button>
+          <div class="paynote">Apple Pay · entered in 3 seconds · no app to install</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAY -->
+    <div class="view" id="v-pay">
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="payrow">
+          <div class="logo">A</div>
+          <div class="who"><b>NiceAce · Hole 7 Pot</b><small>Pebble Beach Golf Links</small></div>
+          <div class="amt tn">$10</div>
+        </div>
+        <div class="payline"><span class="muted">Pay with</span><span>Apple Pay · ···· 4029</span></div>
+        <div class="payline"><span class="muted">Entry</span><span>1 hole-in-one ticket</span></div>
+        <div class="payline"><span class="muted">If you ace it</span><span style="color:var(--gold)">You win the full pot</span></div>
+        <div class="faceid" id="faceid">
+          <div style="position:relative;display:flex;align-items:center;justify-content:center">
+            <svg class="ring" viewBox="0 0 64 64"><circle class="track" cx="32" cy="32" r="29"/><circle class="prog" cx="32" cy="32" r="29"/></svg>
+            <span class="ficon">⛳</span>
+          </div>
+          <div class="fitxt" id="fitxt">Tap to confirm with Face ID</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CELEBRATE -->
+    <div class="view" id="v-celebrate">
+      <div class="aurora"></div><div class="confetti" id="confetti"></div>
+      <div class="view-body">
+        <div class="bigcheck">
+          <svg viewBox="0 0 48 48" fill="none"><path d="M12 25l8 8 16-18" stroke="#1a1310" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h1>YOU'RE IN!</h1>
+        <div class="entry">Entry <b id="entryNo">#138</b> · Hole 7 · Pebble Beach</div>
+        <div class="potmini">
+          <div class="pl">★ The Pot Is Now ★</div>
+          <div class="pot tn" id="celebratePot">$48,760</div>
+          <div class="grew">▲ you pushed it up <b style="color:var(--green)">$10</b></div>
+        </div>
+        <div class="cont">
+          <button class="cta" id="toLiveBtn"><span class="sheen"></span>SEE THE LIVE POT →</button>
+          <button class="cta ghost" id="aceTestBtn" style="margin-top:8px">⛳ Simulate: I aced it</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIVE -->
+    <div class="view" id="v-live">
+      <div class="view-body">
+        <div class="lscroll" id="lscroll">
+          <div class="ltop">
+            <div class="brand">NICEACE<b>.</b></div>
+            <span class="live"><i></i>LIVE · HOLE 7</span>
+          </div>
+          <div class="lhero">
+            <div class="rays" style="opacity:.45"></div>
+            <div class="pl">★ Ace Pot · Winner Takes All ★</div>
+            <div class="pot tn" id="livePot">$48,760</div>
+            <div class="grow tn"><span class="up">▲ +$120</span> in the last hour · <span id="liveField">138</span> in</div>
+          </div>
+          <div class="youchip">
+            <div class="badge">IN</div>
+            <div class="txt"><b>You're entered</b><small>Ticket #138 · good all day on Hole 7</small></div>
+            <div class="stat"><b class="tn">1</b><small>your tickets</small></div>
+          </div>
+          <div class="sect"><h3>Live on the tee</h3><span class="live"><i></i></span></div>
+          <div class="feed" id="feed"></div>
+          <div class="sect"><h3>This month's aces</h3><a href="#">Trophy room →</a></div>
+          <div class="board">
+            <div class="brow top1"><span class="rk">1</span><span class="av" style="background:#f5c451;color:#1b1a20">SW</span><span class="nm">Sam W.</span><span class="ct">won <b>$920</b></span></div>
+            <div class="brow"><span class="rk">2</span><span class="av" style="background:#3b7dd8">DR</span><span class="nm">Dev R.</span><span class="ct">won <b>$640</b></span></div>
+            <div class="brow"><span class="rk">3</span><span class="av" style="background:#9a5cd0">MK</span><span class="nm">Maria K.</span><span class="ct">won <b>$415</b></span></div>
+          </div>
+          <div class="share">
+            <button id="shareBtn">⤴ Invite your foursome</button>
+            <button class="acewin" id="aceBtn">⛳ I aced it</button>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 7v11a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1V9z"/></svg>Pot</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>Friends</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16l-2-9 5 4 4-7 4 7 5-4-2 9z"/></svg>Trophies</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>You</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACE WIN -->
+    <div id="aceOverlay">
+      <div class="confetti" id="confetti2"></div>
+      <div class="trophy">🏆</div>
+      <h1>HOLE IN ONE!</h1>
+      <div class="won pot tn" id="wonAmt">$48,760</div>
+      <p>Verified by NiceAce. The whole pot is yours — payout hits your account tonight. The course is buzzing.</p>
+      <button class="cta" id="aceDone" style="max-width:260px"><span class="sheen"></span>CLAIM IT →</button>
+    </div>
+
+    <div class="homeind"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var device = document.getElementById('device');
+  var POT = 48750, FIELD = 137;
+  var money = function(n){ return '$' + n.toLocaleString('en-US'); };
+
+  function show(id){
+    document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+    document.getElementById(id).classList.add('active');
+  }
+
+  // theme + cta switchers
+  document.querySelectorAll('.theme-btn').forEach(function(b){
+    b.onclick = function(){
+      document.querySelectorAll('.theme-btn').forEach(function(x){x.classList.remove('on')});
+      b.classList.add('on');
+      device.classList.remove('theme-jackpot','theme-broadcast');
+      device.classList.add('theme-' + b.dataset.theme);
+    };
+  });
+  document.querySelectorAll('.cta-btn[data-cta]').forEach(function(b){
+    b.onclick = function(){
+      document.querySelectorAll('.cta-btn[data-cta]').forEach(function(x){x.classList.remove('on')});
+      b.classList.add('on');
+      device.classList.remove('cta-classic','cta-kinetic');
+      device.classList.add('cta-' + b.dataset.cta);
+    };
+  });
+
+  // confetti
+  function burst(elId){
+    var el = document.getElementById(elId); if(!el) return; el.innerHTML='';
+    var cols = ['#f5c451','#39ff88','#ffffff','#ff8a3c'];
+    for(var i=0;i<70;i++){
+      var s = document.createElement('i');
+      s.style.left = Math.random()*100 + '%';
+      s.style.background = cols[i%4];
+      s.style.animationDuration = (1.4 + Math.random()*1.6) + 's';
+      s.style.animationDelay = (Math.random()*0.5) + 's';
+      el.appendChild(s);
+    }
+  }
+
+  // ARRIVE → PAY
+  document.getElementById('enterBtn').onclick = function(){ show('v-pay'); };
+
+  // PAY (Face ID) → CELEBRATE
+  document.getElementById('faceid').onclick = function(){
+    var f = this; if(f.classList.contains('go')) return;
+    f.classList.add('go');
+    document.getElementById('fitxt').textContent = 'Confirming…';
+    setTimeout(function(){
+      FIELD += 1; POT += 10;
+      document.getElementById('entryNo').textContent = '#' + (FIELD);
+      document.getElementById('celebratePot').textContent = money(POT);
+      document.getElementById('livePot').textContent = money(POT);
+      document.getElementById('liveField').textContent = FIELD;
+      document.getElementById('wonAmt').textContent = money(POT);
+      show('v-celebrate'); burst('confetti');
+      f.classList.remove('go'); document.getElementById('fitxt').textContent='Tap to confirm with Face ID';
+    }, 1000);
+  };
+
+  // CELEBRATE → LIVE  (+ run the live ticker)
+  var tickerTimer = null;
+  var events = [
+    ['#39ff88','<b>Maria K.</b> just entered · pot ' ],
+    ['#3b7dd8','<b>Dev R.</b> is on the tee'],
+    ['#ff8a3c','<b>Foursome from #4</b> just joined'],
+    ['#f5c451','<b>Sam W.</b> bumped the pot'],
+  ];
+  function pushEvent(){
+    var feed = document.getElementById('feed'); if(!feed) return;
+    var e = events[Math.floor(Math.random()*events.length)];
+    if(Math.random()>0.4){ FIELD+=1; POT+=10;
+      document.getElementById('livePot').textContent = money(POT);
+      document.getElementById('liveField').textContent = FIELD;
+      document.getElementById('wonAmt').textContent = money(POT);
+    }
+    var row = document.createElement('div'); row.className='frow';
+    var label = e[1] + (e[1].indexOf('pot')>-1 ? '<b>'+money(POT)+'</b>' : '');
+    row.innerHTML = '<span class="fd" style="background:'+e[0]+'"></span><span>'+label+'</span>';
+    feed.insertBefore(row, feed.firstChild);
+    while(feed.children.length>5) feed.removeChild(feed.lastChild);
+  }
+  function goLive(){
+    show('v-live');
+    document.getElementById('feed').innerHTML='';
+    pushEvent(); pushEvent();
+    clearInterval(tickerTimer); tickerTimer = setInterval(pushEvent, 2600);
+  }
+  document.getElementById('toLiveBtn').onclick = goLive;
+
+  // ACE win
+  function aceWin(){
+    document.getElementById('wonAmt').textContent = money(POT);
+    document.getElementById('aceOverlay').classList.add('show');
+    burst('confetti2'); clearInterval(tickerTimer);
+  }
+  document.getElementById('aceTestBtn').onclick = aceWin;
+  document.getElementById('aceBtn').onclick = aceWin;
+
+  // share + claim + restart
+  document.getElementById('shareBtn').onclick = function(){
+    this.textContent = '✓ Invite link copied';
+    setTimeout((function(b){return function(){b.textContent='⤴ Invite your foursome';};})(this),1800);
+  };
+  document.getElementById('aceDone').onclick = restart;
+  document.getElementById('restartBtn').onclick = restart;
+  function restart(){
+    clearInterval(tickerTimer);
+    POT = 48750; FIELD = 137;
+    document.getElementById('arrivePot').textContent = money(POT);
+    document.getElementById('arriveField').textContent = FIELD + ' in today · grows $10 every entry';
+    document.getElementById('aceOverlay').classList.remove('show');
+    show('v-arrive');
+  }
+})();
+</script>
+</body>
+</html>
