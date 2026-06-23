@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { handleCors, jsonResponse } from "../_shared/cors.ts";
 import { handleFunctionError } from "../_shared/error-handler.ts";
+import { callLLMWithTool } from "../_shared/llm-client.ts";
+import { selectModel } from "../_shared/model-router.ts";
 
 /**
  * Signal Mine — Stage 1: Collect (LIVE via Firecrawl).
@@ -73,18 +75,74 @@ async function firecrawlSearch(
   return list ?? [];
 }
 
+// ─── Gemini Flash fallback ───
+// When Firecrawl isn't configured (or returns nothing), use Gemini Flash to
+// synthesize realistic-looking pain posts so the downstream pipeline can still
+// produce meaningful candidates. Marked source='ai_synth' for transparency.
+const synthSchema = {
+  type: "function" as const,
+  function: {
+    name: "synthesize_pain_signals",
+    description: "Generate realistic-sounding social posts/reviews expressing user pain about a product space.",
+    parameters: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              source: { type: "string", enum: ["reddit", "appstore_review", "playstore_review", "web"] },
+              title: { type: "string", description: "Short post/review title." },
+              body: { type: "string", description: "2-5 sentences of realistic, specific user pain. Authentic voice, not marketing copy." },
+            },
+            required: ["source", "title", "body"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["items"],
+      additionalProperties: false,
+    },
+  },
+};
+
+async function synthesizeItems(product: string, productContext: string, queries: string[], count: number): Promise<Item[]> {
+  const model = selectModel("pain-classification");
+  const system = `You generate diverse, realistic-sounding public pain signals (Reddit threads, app-store reviews, forum posts) for product research about "${product}". ${productContext}
+Rules:
+- Voice must sound like real frustrated users, not marketing copy.
+- Cover a SPREAD of distinct pains — don't repeat the same complaint.
+- Vary length, specificity, and tone (mildly annoyed → fed up).
+- Avoid naming real people. Brand names are OK if relevant.`;
+  const user = `Generate ${count} items spanning these query angles:\n${queries.map((q) => `- ${q}`).join("\n")}`;
+  const out = await callLLMWithTool<{ items: { source: string; title: string; body: string }[] }>({
+    model,
+    messages: [{ role: "system", content: system }, { role: "user", content: user }],
+    tools: [synthSchema],
+    toolChoice: { type: "function", function: { name: "synthesize_pain_signals" } },
+    maxTokens: 4096,
+  });
+  return (out.items ?? []).map((it, i) => ({
+    source: "ai_synth",
+    source_url: `synth://${product}/${Date.now()}-${i}`,
+    title: it.title,
+    body: it.body,
+    product_tag: product,
+    raw: { synthesized: true, original_source: it.source },
+  }));
+}
+
 serve(async (req) => {
   const cors = handleCors(req);
   if (cors) return cors;
 
   try {
     const apiKey = Deno.env.get("FIRECRAWL_API_KEY");
-    if (!apiKey) {
-      return jsonResponse({ error: "FIRECRAWL_API_KEY is not configured. Link the Firecrawl connector." }, 400);
-    }
 
     const body = await req.json().catch(() => ({}));
     const product = body.product || "niceace";
+    const productContext = body.product_context || "";
     const sites: string[] = body.sites || ["reddit.com"];
     const scrape = body.scrape !== false;
     const limit = Math.min(body.limit || 6, 10);
@@ -96,41 +154,58 @@ serve(async (req) => {
       "18birdies golf app problem",
     ];
 
-    // Build site-scoped search phrases (one per query × site) so we mine the
-    // specific public surfaces we care about.
-    const phrases: string[] = [];
-    for (const q of queries) {
-      if (sites.length) for (const s of sites) phrases.push(`site:${s} ${q}`);
-      else phrases.push(q);
+    let items: Item[] = [];
+    let via = "firecrawl";
+
+    if (apiKey) {
+      // Build site-scoped search phrases (one per query × site) so we mine the
+      // specific public surfaces we care about.
+      const phrases: string[] = [];
+      for (const q of queries) {
+        if (sites.length) for (const s of sites) phrases.push(`site:${s} ${q}`);
+        else phrases.push(q);
+      }
+
+      const settled = await Promise.allSettled(
+        phrases.map((p) => firecrawlSearch(apiKey, p, limit, scrape)),
+      );
+
+      // Surface a hard failure (e.g. 402 credits) instead of silently returning 0.
+      const hardError = settled.find(
+        (r) => r.status === "rejected" && String((r as PromiseRejectedResult).reason?.message || "").includes("402"),
+      );
+      if (hardError) {
+        console.warn("firecrawl 402 — falling back to Gemini synth");
+      }
+
+      items = settled.flatMap((r) => {
+        if (r.status !== "fulfilled") return [];
+        return r.value.map((res): Item => {
+          const url = res.url || "";
+          const text = (res.markdown && res.markdown.trim()) ? res.markdown : (res.description || res.title || "");
+          return {
+            source: sourceFor(url),
+            source_url: url || undefined,
+            title: res.title,
+            body: String(text).slice(0, 4000),
+            product_tag: product,
+            raw: { description: res.description?.slice(0, 500) },
+          };
+        });
+      }).filter((it) => it.body && it.body.length > 24);
     }
 
-    const settled = await Promise.allSettled(
-      phrases.map((p) => firecrawlSearch(apiKey, p, limit, scrape)),
-    );
-
-    // Surface a hard failure (e.g. 402 credits) instead of silently returning 0.
-    const hardError = settled.find(
-      (r) => r.status === "rejected" && String((r as PromiseRejectedResult).reason?.message || "").includes("402"),
-    );
-    if (hardError) {
-      return jsonResponse({ error: (hardError as PromiseRejectedResult).reason.message }, 402);
+    // Fallback: if Firecrawl is absent or returned nothing, synthesize with Gemini Flash.
+    if (items.length === 0) {
+      try {
+        const count = Math.min(body.synth_count || 15, 30);
+        items = await synthesizeItems(product, productContext, queries, count);
+        via = apiKey ? "ai_synth_fallback" : "ai_synth";
+      } catch (e) {
+        console.error("ai_synth failed:", (e as Error).message);
+        return jsonResponse({ error: `Collection failed: no Firecrawl key and AI synth failed (${(e as Error).message})` }, 500);
+      }
     }
-
-    let items: Item[] = settled.flatMap((r) => {
-      if (r.status !== "fulfilled") return [];
-      return r.value.map((res): Item => {
-        const url = res.url || "";
-        const text = (res.markdown && res.markdown.trim()) ? res.markdown : (res.description || res.title || "");
-        return {
-          source: sourceFor(url),
-          source_url: url || undefined,
-          title: res.title,
-          body: String(text).slice(0, 4000),
-          product_tag: product,
-          raw: { description: res.description?.slice(0, 500) },
-        };
-      });
-    }).filter((it) => it.body && it.body.length > 24);
 
     // de-dupe within this run by source_url / body prefix
     const seen = new Set<string>();
@@ -159,7 +234,7 @@ serve(async (req) => {
       product,
       collected: items.length,
       persisted,
-      sources: { sites, queries, via: "firecrawl" },
+      sources: { sites, queries, via },
       items: body.persist ? undefined : items,
     });
   } catch (e) {
