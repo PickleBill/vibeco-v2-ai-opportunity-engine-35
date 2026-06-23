@@ -101,6 +101,21 @@ const SignalBoard = () => {
   const [productTags, setProductTags] = useState<string[]>([]);
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [latestScanDate, setLatestScanDate] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Owner gate: Promote/Dismiss and Run scan mutate the board, so they're
+  // limited to an authenticated admin. RLS enforces this server-side too;
+  // this just hides controls a public visitor can't use. (Pattern mirrors
+  // MySimulations.tsx.)
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { setIsAdmin(false); return; }
+      const { data: roleData } = await (supabase.from("user_roles") as any)
+        .select("role").eq("user_id", session.user.id).eq("role", "admin").maybeSingle();
+      setIsAdmin(!!roleData);
+    })();
+  }, []);
 
   // Discover available product_tags (verticals) from the most recently ingested data.
   useEffect(() => {
@@ -231,10 +246,12 @@ const SignalBoard = () => {
                   </SelectContent>
                 </Select>
               )}
-              <Button onClick={runScan} disabled={scanning} className="gap-2">
-                {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {scanning ? "Scanning…" : "Run scan"}
-              </Button>
+              {isAdmin && (
+                <Button onClick={runScan} disabled={scanning} className="gap-2">
+                  {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  {scanning ? "Scanning…" : "Run scan"}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -352,14 +369,16 @@ const SignalBoard = () => {
                     </div>
                   )}
 
-                  <div className="mt-4 flex gap-2">
-                    <Button size="sm" className="gap-1.5" onClick={() => setStatus(realIdx, "promoted")}>
-                      Promote to change request <ArrowUpRight className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="gap-1.5 text-muted-foreground" onClick={() => setStatus(realIdx, "dismissed")}>
-                      <X className="h-3.5 w-3.5" /> Dismiss
-                    </Button>
-                  </div>
+                  {isAdmin && (
+                    <div className="mt-4 flex gap-2">
+                      <Button size="sm" className="gap-1.5" onClick={() => setStatus(realIdx, "promoted")}>
+                        Promote to change request <ArrowUpRight className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="gap-1.5 text-muted-foreground" onClick={() => setStatus(realIdx, "dismissed")}>
+                        <X className="h-3.5 w-3.5" /> Dismiss
+                      </Button>
+                    </div>
+                  )}
                 </Card>
               );
             })}
