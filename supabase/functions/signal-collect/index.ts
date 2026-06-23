@@ -502,7 +502,7 @@ const anthropicWebSearchAdapter: Adapter = {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-5",
           max_tokens: 4096,
           tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 8 }],
           messages: [{ role: "user", content: prompt }],
