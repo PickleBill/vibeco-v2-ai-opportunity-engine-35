@@ -309,6 +309,42 @@ export type Database = {
           },
         ]
       }
+      opportunity_roadmaps: {
+        Row: {
+          created_at: string
+          generated_at: string
+          id: string
+          market_read: string | null
+          model: string | null
+          opportunities: Json
+          product_tag: string
+          scan_date: string | null
+          summary: string | null
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          market_read?: string | null
+          model?: string | null
+          opportunities?: Json
+          product_tag: string
+          scan_date?: string | null
+          summary?: string | null
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          market_read?: string | null
+          model?: string | null
+          opportunities?: Json
+          product_tag?: string
+          scan_date?: string | null
+          summary?: string | null
+        }
+        Relationships: []
+      }
       project_registry: {
         Row: {
           category: Database["public"]["Enums"]["project_category"]
@@ -506,6 +542,45 @@ export type Database = {
         }
         Relationships: []
       }
+      signal_verticals: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          id: string
+          keywords: string[]
+          lookback_days: number
+          product_tag: string
+          subreddits: string[]
+          updated_at: string
+          vertical: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          id?: string
+          keywords?: string[]
+          lookback_days?: number
+          product_tag: string
+          subreddits?: string[]
+          updated_at?: string
+          vertical: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          id?: string
+          keywords?: string[]
+          lookback_days?: number
+          product_tag?: string
+          subreddits?: string[]
+          updated_at?: string
+          vertical?: string
+        }
+        Relationships: []
+      }
       simulator_captures: {
         Row: {
           concept_image_url: string | null
@@ -600,6 +675,9 @@ export type Database = {
           title: string
         }[]
       }
+      run_signal_collect: { Args: never; Returns: undefined }
+      run_signal_process: { Args: never; Returns: undefined }
+      signal_slug: { Args: { s: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
