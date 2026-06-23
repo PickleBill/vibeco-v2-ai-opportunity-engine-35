@@ -106,7 +106,7 @@ const Index = () => {
           </main>
           <Footer />
         </div>
-      </DiscoveryAuditProvider>
+      
     </HelmetProvider>
   );
 };
