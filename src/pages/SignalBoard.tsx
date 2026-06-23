@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { HelmetProvider, Helmet } from "react-helmet-async";
-import { Radar, Sparkles, ArrowUpRight, X, Quote, Loader2, TrendingUp } from "lucide-react";
+import { Radar, Sparkles, ArrowUpRight, X, Quote, Loader2, TrendingUp, Radio } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 /**
  * Signal Board — the human-gated surface for Signal Mine (Stage 5).
@@ -97,37 +98,65 @@ const SignalBoard = () => {
   const [scanning, setScanning] = useState(false);
   const [counts, setCounts] = useState<{ collected: number; pain: number; clusters: number; candidates: number } | null>(null);
   const [usingSample, setUsingSample] = useState(true);
+  const [productTags, setProductTags] = useState<string[]>([]);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [latestScanDate, setLatestScanDate] = useState<string | null>(null);
 
-  // Try to load persisted candidates + durable themes on mount (falls back to sample).
+  // Discover available product_tags (verticals) from the most recently ingested data.
   useEffect(() => {
     (async () => {
       try {
-        const { data, error } = await (supabase as any)
+        const { data } = await (supabase as any)
           .from("feature_candidates")
-          .select("*")
-          .eq("status", "open")
-          .order("pain_score", { ascending: false })
-          .limit(30);
+          .select("product_tag, scan_date")
+          .not("product_tag", "is", null)
+          .order("scan_date", { ascending: false, nullsFirst: false })
+          .limit(500);
+        if (data && data.length) {
+          const tags = Array.from(new Set(data.map((r: any) => r.product_tag).filter(Boolean))) as string[];
+          setProductTags(tags);
+          if (tags.length && !activeTag) setActiveTag(tags[0]);
+        }
+      } catch { /* tables missing — keep sample */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load candidates + themes (optionally filtered by active product_tag).
+  useEffect(() => {
+    (async () => {
+      try {
+        let cQuery: any = (supabase as any)
+          .from("feature_candidates").select("*").eq("status", "open")
+          .order("pain_score", { ascending: false }).limit(60);
+        if (activeTag) cQuery = cQuery.eq("product_tag", activeTag);
+        const { data, error } = await cQuery;
         if (!error && data && data.length) {
           setCandidates(data as Candidate[]);
           setUsingSample(false);
+          const dates = data.map((r: any) => r.scan_date).filter(Boolean).sort();
+          setLatestScanDate(dates.length ? dates[dates.length - 1] : null);
+        } else if (activeTag) {
+          setCandidates([]);
+          setUsingSample(false);
         }
-        const { data: th } = await (supabase as any)
-          .from("signal_themes")
-          .select("*")
-          .eq("status", "open")
-          .order("pain_score", { ascending: false })
-          .limit(12);
+        let tQuery: any = (supabase as any)
+          .from("signal_themes").select("*").eq("status", "open")
+          .order("pain_score", { ascending: false }).limit(12);
+        if (activeTag) tQuery = tQuery.eq("product_tag", activeTag);
+        const { data: th } = await tQuery;
         if (th && th.length) {
           setThemes(th.map((t: any) => ({
             id: t.id, title: t.title, pain_score: t.pain_score, occurrence_count: t.occurrence_count,
             score_history: t.score_history ?? [],
             trend: (t.score_history?.length ?? 0) >= 2 ? Math.round(t.score_history.at(-1).s - t.score_history.at(-2).s) : 0,
           })));
+        } else if (activeTag) {
+          setThemes([]);
         }
       } catch { /* tables not migrated yet — keep sample */ }
     })();
-  }, []);
+  }, [activeTag]);
 
   const runScan = async () => {
     setScanning(true);
@@ -191,10 +220,40 @@ const SignalBoard = () => {
                 the strongest into the build loop.
               </p>
             </div>
-            <Button onClick={runScan} disabled={scanning} className="gap-2">
-              {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {scanning ? "Scanning…" : "Run scan"}
-            </Button>
+            <div className="flex items-center gap-2">
+              {productTags.length > 1 && (
+                <Select value={activeTag ?? undefined} onValueChange={(v) => setActiveTag(v)}>
+                  <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Vertical" /></SelectTrigger>
+                  <SelectContent>
+                    {productTags.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+              <Button onClick={runScan} disabled={scanning} className="gap-2">
+                {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {scanning ? "Scanning…" : "Run scan"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Live/Sample status strip */}
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+            {usingSample ? (
+              <Badge variant="outline" className="gap-1.5 border-warning/50 text-warning">
+                <span className="h-1.5 w-1.5 rounded-full bg-warning" /> SAMPLE DATA
+              </Badge>
+            ) : (
+              <Badge className="gap-1.5 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/15">
+                <Radio className="h-3 w-3" /> LIVE DATA
+              </Badge>
+            )}
+            {!usingSample && activeTag && (
+              <span className="text-muted-foreground">
+                vertical: <span className="font-mono text-foreground">{activeTag}</span>
+                {latestScanDate && <> · latest scan {latestScanDate}</>}
+                <> · source: Live scan · Reddit/X</>
+              </span>
+            )}
           </div>
 
           {/* Stat strip */}

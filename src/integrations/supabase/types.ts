@@ -84,6 +84,7 @@ export type Database = {
           product_tag: string | null
           proposed_solution: string
           representative_quotes: Json | null
+          scan_date: string | null
           status: string | null
           theme_id: string | null
         }
@@ -99,6 +100,7 @@ export type Database = {
           product_tag?: string | null
           proposed_solution: string
           representative_quotes?: Json | null
+          scan_date?: string | null
           status?: string | null
           theme_id?: string | null
         }
@@ -114,6 +116,7 @@ export type Database = {
           product_tag?: string | null
           proposed_solution?: string
           representative_quotes?: Json | null
+          scan_date?: string | null
           status?: string | null
           theme_id?: string | null
         }
@@ -378,6 +381,7 @@ export type Database = {
           member_count: number | null
           pain_score: number | null
           product_tag: string | null
+          scan_date: string | null
           theme: string
         }
         Insert: {
@@ -386,6 +390,7 @@ export type Database = {
           member_count?: number | null
           pain_score?: number | null
           product_tag?: string | null
+          scan_date?: string | null
           theme: string
         }
         Update: {
@@ -394,6 +399,7 @@ export type Database = {
           member_count?: number | null
           pain_score?: number | null
           product_tag?: string | null
+          scan_date?: string | null
           theme?: string
         }
         Relationships: []
@@ -411,6 +417,7 @@ export type Database = {
           processed: boolean | null
           product_tag: string | null
           raw: Json | null
+          scan_date: string | null
           source: string
           source_url: string | null
           title: string | null
@@ -427,6 +434,7 @@ export type Database = {
           processed?: boolean | null
           product_tag?: string | null
           raw?: Json | null
+          scan_date?: string | null
           source: string
           source_url?: string | null
           title?: string | null
@@ -443,6 +451,7 @@ export type Database = {
           processed?: boolean | null
           product_tag?: string | null
           raw?: Json | null
+          scan_date?: string | null
           source?: string
           source_url?: string | null
           title?: string | null
@@ -460,6 +469,7 @@ export type Database = {
           pain_score: number | null
           product_tag: string | null
           sample_quotes: Json | null
+          scan_date: string | null
           score_history: Json | null
           status: string | null
           title: string
@@ -474,6 +484,7 @@ export type Database = {
           pain_score?: number | null
           product_tag?: string | null
           sample_quotes?: Json | null
+          scan_date?: string | null
           score_history?: Json | null
           status?: string | null
           title: string
@@ -488,6 +499,7 @@ export type Database = {
           pain_score?: number | null
           product_tag?: string | null
           sample_quotes?: Json | null
+          scan_date?: string | null
           score_history?: Json | null
           status?: string | null
           title?: string
