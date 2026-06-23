@@ -10,6 +10,7 @@ import Report from "./pages/Report.tsx";
 import MySimulations from "./pages/MySimulations.tsx";
 import Portfolio from "./pages/Portfolio.tsx";
 import SignalBoard from "./pages/SignalBoard.tsx";
+import Briefing from "./pages/Briefing.tsx";
 // Inbox route hidden until Sprint 3 (auto-evaluate flywheel wiring)
 // import Inbox from "./pages/Inbox.tsx";
 import NotFound from "./pages/NotFound.tsx";
