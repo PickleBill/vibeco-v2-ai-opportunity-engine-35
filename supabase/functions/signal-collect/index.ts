@@ -154,41 +154,58 @@ serve(async (req) => {
       "18birdies golf app problem",
     ];
 
-    // Build site-scoped search phrases (one per query × site) so we mine the
-    // specific public surfaces we care about.
-    const phrases: string[] = [];
-    for (const q of queries) {
-      if (sites.length) for (const s of sites) phrases.push(`site:${s} ${q}`);
-      else phrases.push(q);
+    let items: Item[] = [];
+    let via = "firecrawl";
+
+    if (apiKey) {
+      // Build site-scoped search phrases (one per query × site) so we mine the
+      // specific public surfaces we care about.
+      const phrases: string[] = [];
+      for (const q of queries) {
+        if (sites.length) for (const s of sites) phrases.push(`site:${s} ${q}`);
+        else phrases.push(q);
+      }
+
+      const settled = await Promise.allSettled(
+        phrases.map((p) => firecrawlSearch(apiKey, p, limit, scrape)),
+      );
+
+      // Surface a hard failure (e.g. 402 credits) instead of silently returning 0.
+      const hardError = settled.find(
+        (r) => r.status === "rejected" && String((r as PromiseRejectedResult).reason?.message || "").includes("402"),
+      );
+      if (hardError) {
+        console.warn("firecrawl 402 — falling back to Gemini synth");
+      }
+
+      items = settled.flatMap((r) => {
+        if (r.status !== "fulfilled") return [];
+        return r.value.map((res): Item => {
+          const url = res.url || "";
+          const text = (res.markdown && res.markdown.trim()) ? res.markdown : (res.description || res.title || "");
+          return {
+            source: sourceFor(url),
+            source_url: url || undefined,
+            title: res.title,
+            body: String(text).slice(0, 4000),
+            product_tag: product,
+            raw: { description: res.description?.slice(0, 500) },
+          };
+        });
+      }).filter((it) => it.body && it.body.length > 24);
     }
 
-    const settled = await Promise.allSettled(
-      phrases.map((p) => firecrawlSearch(apiKey, p, limit, scrape)),
-    );
-
-    // Surface a hard failure (e.g. 402 credits) instead of silently returning 0.
-    const hardError = settled.find(
-      (r) => r.status === "rejected" && String((r as PromiseRejectedResult).reason?.message || "").includes("402"),
-    );
-    if (hardError) {
-      return jsonResponse({ error: (hardError as PromiseRejectedResult).reason.message }, 402);
+    // Fallback: if Firecrawl is absent or returned nothing, synthesize with Gemini Flash.
+    if (items.length === 0) {
+      try {
+        const count = Math.min(body.synth_count || 15, 30);
+        items = await synthesizeItems(product, productContext, queries, count);
+        via = apiKey ? "ai_synth_fallback" : "ai_synth";
+      } catch (e) {
+        console.error("ai_synth failed:", (e as Error).message);
+        return jsonResponse({ error: `Collection failed: no Firecrawl key and AI synth failed (${(e as Error).message})` }, 500);
+      }
     }
-
-    let items: Item[] = settled.flatMap((r) => {
-      if (r.status !== "fulfilled") return [];
-      return r.value.map((res): Item => {
-        const url = res.url || "";
-        const text = (res.markdown && res.markdown.trim()) ? res.markdown : (res.description || res.title || "");
-        return {
-          source: sourceFor(url),
-          source_url: url || undefined,
-          title: res.title,
-          body: String(text).slice(0, 4000),
-          product_tag: product,
-          raw: { description: res.description?.slice(0, 500) },
-        };
-      });
-    }).filter((it) => it.body && it.body.length > 24);
 
     // de-dupe within this run by source_url / body prefix
     const seen = new Set<string>();
@@ -217,7 +234,7 @@ serve(async (req) => {
       product,
       collected: items.length,
       persisted,
-      sources: { sites, queries, via: "firecrawl" },
+      sources: { sites, queries, via },
       items: body.persist ? undefined : items,
     });
   } catch (e) {
