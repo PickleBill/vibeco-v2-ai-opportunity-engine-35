@@ -166,7 +166,9 @@ const SignalBoard = () => {
         body: { product: "niceace", persist: true },
       });
       if (cErr) throw cErr;
-      toast.message(`Collected ${(collected as any)?.collected ?? 0} items (${(collected as any)?.persisted ?? 0} new)`);
+      const via = (collected as any)?.sources?.via ?? "firecrawl";
+      const viaLabel = via.startsWith("ai_synth") ? "AI-synthesized (Gemini Flash)" : "Firecrawl";
+      toast.message(`Collected ${(collected as any)?.collected ?? 0} items via ${viaLabel} (${(collected as any)?.persisted ?? 0} new)`);
 
       // Stages 2-4 + theme persistence: process unprocessed rows from the DB.
       const { data: result, error: pErr } = await supabase.functions.invoke("signal-process", {
