@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { handleCors, jsonResponse } from "../_shared/cors.ts";
 import { handleFunctionError } from "../_shared/error-handler.ts";
+import { callLLMWithTool } from "../_shared/llm-client.ts";
+import { selectModel } from "../_shared/model-router.ts";
 
 /**
  * Signal Mine — Stage 1: Collect (LIVE via Firecrawl).
