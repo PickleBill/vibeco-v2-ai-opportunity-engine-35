@@ -272,11 +272,12 @@ const SignalBoard = () => {
         : { product: activeTag ?? "niceace", persist: true };
       const { data: collected, error: cErr } = await supabase.functions.invoke("signal-collect", { body: collectBody });
       if (cErr) throw cErr;
-      const via = (collected as any)?.sources?.via ?? "firecrawl";
-      const viaLabel = via === "reddit_api" ? "the official Reddit API"
-        : via.startsWith("ai_synth") ? "AI synth (illustrative)" : "Firecrawl";
-      const st = (collected as any)?.sources?.status?.[0];
-      toast.message(`Collected ${(collected as any)?.collected ?? 0} items via ${viaLabel}${st?.status === "degraded" ? " (degraded)" : ""} — ${(collected as any)?.persisted ?? 0} new`);
+      const status = ((collected as any)?.sources?.status ?? []) as { name: string; status: string; posts: number }[];
+      const active = status.filter((s) => s.status !== "skipped");
+      const niceName = (n: string) => n === "hackernews" ? "Hacker News" : n === "reddit" ? "Reddit" : n === "firecrawl" ? "review sites" : n === "ai_synth" ? "AI synth (demo)" : n;
+      const viaLabel = active.length ? active.map((s) => niceName(s.name)).join(" · ") : "no sources configured";
+      const degraded = active.some((s) => s.status === "degraded");
+      toast.message(`Collected ${(collected as any)?.collected ?? 0} items via ${viaLabel}${degraded ? " (some degraded)" : ""} — ${(collected as any)?.persisted ?? 0} new`);
 
       // Stages 2-4 + theme persistence: classify → cluster → synthesize.
       const { data: result, error: pErr } = await supabase.functions.invoke("signal-process", {
@@ -387,7 +388,7 @@ const SignalBoard = () => {
               </div>
               <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight">Signal Board</h1>
               <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                Customer pain points mined from public sources (Reddit + app-store reviews),
+                Customer pain points mined from public sources (Reddit · Hacker News · review sites),
                 clustered and turned into ranked, evidence-backed feature candidates. Promote
                 the strongest into the build loop.
               </p>
