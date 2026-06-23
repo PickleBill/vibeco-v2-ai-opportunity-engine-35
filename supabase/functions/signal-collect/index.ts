@@ -75,18 +75,74 @@ async function firecrawlSearch(
   return list ?? [];
 }
 
+// ─── Gemini Flash fallback ───
+// When Firecrawl isn't configured (or returns nothing), use Gemini Flash to
+// synthesize realistic-looking pain posts so the downstream pipeline can still
+// produce meaningful candidates. Marked source='ai_synth' for transparency.
+const synthSchema = {
+  type: "function" as const,
+  function: {
+    name: "synthesize_pain_signals",
+    description: "Generate realistic-sounding social posts/reviews expressing user pain about a product space.",
+    parameters: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              source: { type: "string", enum: ["reddit", "appstore_review", "playstore_review", "web"] },
+              title: { type: "string", description: "Short post/review title." },
+              body: { type: "string", description: "2-5 sentences of realistic, specific user pain. Authentic voice, not marketing copy." },
+            },
+            required: ["source", "title", "body"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["items"],
+      additionalProperties: false,
+    },
+  },
+};
+
+async function synthesizeItems(product: string, productContext: string, queries: string[], count: number): Promise<Item[]> {
+  const model = selectModel("pain-classification");
+  const system = `You generate diverse, realistic-sounding public pain signals (Reddit threads, app-store reviews, forum posts) for product research about "${product}". ${productContext}
+Rules:
+- Voice must sound like real frustrated users, not marketing copy.
+- Cover a SPREAD of distinct pains — don't repeat the same complaint.
+- Vary length, specificity, and tone (mildly annoyed → fed up).
+- Avoid naming real people. Brand names are OK if relevant.`;
+  const user = `Generate ${count} items spanning these query angles:\n${queries.map((q) => `- ${q}`).join("\n")}`;
+  const out = await callLLMWithTool<{ items: { source: string; title: string; body: string }[] }>({
+    model,
+    messages: [{ role: "system", content: system }, { role: "user", content: user }],
+    tools: [synthSchema],
+    toolChoice: { type: "function", function: { name: "synthesize_pain_signals" } },
+    maxTokens: 4096,
+  });
+  return (out.items ?? []).map((it, i) => ({
+    source: "ai_synth",
+    source_url: `synth://${product}/${Date.now()}-${i}`,
+    title: it.title,
+    body: it.body,
+    product_tag: product,
+    raw: { synthesized: true, original_source: it.source },
+  }));
+}
+
 serve(async (req) => {
   const cors = handleCors(req);
   if (cors) return cors;
 
   try {
     const apiKey = Deno.env.get("FIRECRAWL_API_KEY");
-    if (!apiKey) {
-      return jsonResponse({ error: "FIRECRAWL_API_KEY is not configured. Link the Firecrawl connector." }, 400);
-    }
 
     const body = await req.json().catch(() => ({}));
     const product = body.product || "niceace";
+    const productContext = body.product_context || "";
     const sites: string[] = body.sites || ["reddit.com"];
     const scrape = body.scrape !== false;
     const limit = Math.min(body.limit || 6, 10);
