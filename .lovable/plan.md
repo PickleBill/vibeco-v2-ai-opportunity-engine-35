@@ -1,53 +1,65 @@
-# Make the Signal Mine push functional + secure
 
-## The situation
+# Wire the dormant adapters — workspace-level, reusable across projects
 
-Claude's GitHub push brought in the `/signal` page and two edge functions (already deployed), but the **database tables were never created** in your live backend — pushing `.sql` files doesn't run them. The board works in sample mode but "Run scan" fails. Claude's migrations also lack required `GRANT`s and use insecure public-write policies (the source of your security warnings).
+## Where we are right now (verified, not guessed)
 
-## What I'll do
+**Workspace connections** (visible to every project you own, including VibeCo Labs):
+- `pickle` (Firecrawl) — **Connected, Managed, not yet linked to this project**. Same connection you set up 18 days ago. Yes, this is reusable across projects — that's the whole point of workspace connections.
+- ElevenLabs, Stripe sandbox, Courtana gDrive, Bill's TikTok — all linkable.
+- **Perplexity** — not in the workspace connector list yet. The "API key" you have is sitting outside Lovable; to make it organizational you add it through the Perplexity connector at the workspace level (one key, link to N projects).
 
-### 1. Run a single corrected migration
-Create the four tables the pipeline needs — `signal_raw`, `signal_clusters`, `feature_candidates`, `signal_themes` (plus the `match_signal_raw` vector function) — fixing the two flaws in Claude's versions:
+**This project's secrets**:
+- `LOVABLE_API_KEY` (managed) — powers `ai_gateway_scout` + every other AI call. Already active.
+- `anthropic_api_key` (lowercase) — exists. **The dormant `anthropic_web_search` adapter reads `ANTHROPIC_API_KEY` (uppercase)**, so it never activates even though the key is there. Casing mismatch is the bug.
+- `INGEST_TOKEN` — external scanner bridge.
 
-- **Add `GRANT`s** so the app can actually read the data:
-  - `GRANT SELECT` to `anon` + `authenticated` (the board is public read).
-  - `GRANT ALL` to `service_role` (the edge functions write here).
-- **Tighten RLS** to kill the security warnings:
-  - Keep public **read** (`SELECT USING (true)` — scanner treats this as intentional).
-  - Remove the `FOR ALL USING (true)` **write** policies. Writes happen only from the edge functions via `service_role`, which bypasses RLS — so no public write access is needed.
+**Currently active adapters in `signal-collect`**: `hackernews` (keyless, working — 257-356 real rows on 3PL), `ai_gateway_scout` (active but URL verification kills most candidates).
+**Currently dormant**: `reddit`, `firecrawl`, `anthropic_web_search`, `perplexity_sonar`.
 
-This keeps the exact same migration filenames/intent Claude authored, just corrected, so your GitHub history stays coherent.
+## Answering your direct questions
 
-### 2. Verify the edge functions are live and reachable
-Call `signal-collect` and `signal-process` directly (read-only first) to confirm they're deployed and the table wiring works end to end. Claude couldn't do this from its sandbox (network-restricted); I can.
+1. **"Can you use the Firecrawl key I already have?"** Yes — it's the workspace `pickle` connection. I just need to **link** it to this project (one tool call). Same connection then powers VibeCo Labs and any other project you link it to, billed once at the workspace level.
+2. **"Is the Anthropic key good for web search?"** Yes — Claude's `web_search_20250305` server-side tool is real and our adapter is already coded for it. It's dormant only because of the env-var casing mismatch above. One-line fix.
+3. **"How do I do this at the org level?"** Workspace connectors are the org-level primitive. Add once in workspace settings, link to each project. Firecrawl + Perplexity both work this way. The raw `anthropic_api_key` secret is project-scoped only — if you want Anthropic org-wide, we'd need to either (a) duplicate the secret per project, or (b) wait for an Anthropic connector (none exists today).
+4. **"Coordinate with VibeCo Labs' Claude orchestration."** Confirmed VibeCo Labs is a separate project in your workspace. Workspace connections (Firecrawl, Perplexity, Reddit if/when added) will be reusable there with zero extra setup. Each project still needs its own edge function code, but the adapter pattern we already built ports cleanly. Recommend Claude's plan there mirrors the adapter interface (`{ name, isConfigured, collect }`) so both projects stay in sync.
 
-### 3. Re-run the security scan
-Confirm the 3 "RLS Policy Always True" warnings are gone after the tightened policies. The remaining `has_role` SECURITY DEFINER finding is the standard role-check pattern (authenticated users must be able to call it) — I'll confirm it's the accepted-risk one already documented, not a new issue.
+## The plan (this project — additive/surgical, no UI changes)
 
-### 4. Confirm the promote/dismiss behavior
-The board's "Promote / Dismiss" buttons try to write `feature_candidates.status` directly from the browser. With public writes removed, that write won't persist (it's already wrapped in a silent try/catch, so nothing breaks visually). I'll flag this and, if you want persistence, wire it through a tiny authenticated path or an edge function in a follow-up — not in this pass.
+### 1. Link Firecrawl `pickle` to this project
+One call: `standard_connectors--connect` with `connector_id: firecrawl`. Injects `FIRECRAWL_API_KEY` into edge function env. The existing `firecrawl` adapter in `signal-collect/index.ts` flips from dormant → active automatically. No code change needed.
 
-## How you'll test it (once I'm done)
+### 2. Add Perplexity at the workspace level
+You'll be prompted to paste the Perplexity key once. Then link to this project. The dormant `perplexity_sonar` adapter activates. Same connection then available to link into VibeCo Labs.
 
-1. **Preview first** (no publish needed): open the Preview, add `/signal` to the URL. You'll see the Trending themes strip + sample candidates.
-2. **Run scan:** click **Run scan** (top right). Watch for toasts: "Collected N items" → "Scan complete — N candidates." The board repopulates with real mined data.
-3. **Trend memory:** run the scan again later (hours/days apart). Recurring themes show a ▲/▼ arrow + sparkline + "seen N×". One scan = snapshot; repeat scans = trend.
-4. **If a scan errors:** you get a red toast with the reason and the board falls back to sample data — paste me the message and I'll debug.
-5. **Publish:** once it looks right in Preview, click **Publish → Update** so `/signal` is live on `vibeco.lovable.app`.
+### 3. Fix the Anthropic casing bug
+Rename the existing `anthropic_api_key` secret to `ANTHROPIC_API_KEY` (or update the adapter to read the lowercase name — I'll do whichever is less disruptive). Then `anthropic_web_search` adapter activates using Claude's grounded web_search tool.
 
-## Notes on your recurring "is it actually pushed?" question
+### 4. Reddit (still pending your action)
+Per the runbook, Reddit needs `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` from a "script" app at reddit.com/prefs/apps. Not a connector — has to be a project secret. This stays in your court; nothing for me to wire until you create the Reddit app.
 
-- **Backend** (edge functions, DB logic): deploys **automatically** on sync — no publish button.
-- **Database migrations**: must be **run explicitly** (what I'm doing in step 1) — they do *not* run from a GitHub push.
-- **Frontend** (pages, UI): needs **Publish → Update** to reach your live URL; works in Preview instantly.
+### 5. Verification run
+After steps 1–3, run `signal-collect` on the 3PL vertical, then `signal-process`. Report real row counts per active adapter and confirm no fabrication.
 
-## Technical detail
+## Other edge AI I'd recommend (built-in, no new keys)
 
-- One migration, idempotent (`CREATE TABLE IF NOT EXISTS`), safe to run over the partially-synced state.
-- Grants: `anon`/`authenticated` = SELECT only; `service_role` = ALL.
-- Policies: one `SELECT USING (true)` per table; no permissive write policies.
-- `vector` extension + `ivfflat` index + `match_signal_raw()` preserved from Claude's migration.
-- `signal-collect` needs `SUPABASE_SERVICE_ROLE_KEY` (auto-provided) to persist; `signal-process` uses `LOVABLE_API_KEY` (already set) for the agent mesh.
+All of these use `LOVABLE_API_KEY` you already have — zero marginal config:
 
-## What I will NOT touch
-The simulator loop, dashboard, auth, or any of the Sprint 9 work — this is scoped strictly to making the freshly-pushed Signal Mine feature functional and secure.
+- **Embedding-based de-dup** in `signal-process`: right now clustering is title/keyword based. Adding Gemini embeddings (`google/text-embedding-004` via the gateway) would collapse near-duplicate complaints across HN/Reddit/Firecrawl into one cluster instead of three. Big quality win for signal density.
+- **Nightly summarization digest**: a `signal-digest` edge function that runs after `signal-process` and produces a 5-bullet "what's new this week" using Gemini Flash Lite. Cheap, weekly cadence.
+- **Auto-tagging vertical relevance**: a tiny Gemini Flash Lite classifier between collect and process that drops obvious off-topic items (e.g., HN posts about "3PL printing" that aren't logistics). Saves cluster noise.
+- **Image generation for opportunity roadmaps**: when `opportunity-roadmap` drafts a build-or-sell idea, auto-generate a hero concept image with `google/gemini-3.1-flash-image`. Free with `LOVABLE_API_KEY`. Makes the board scannable.
+- **Embeddings-based "similar opportunity" links** on the roadmap UI — same embedding store, no new infra.
+
+These are individual follow-up plans, not part of this one. Flag which sound interesting and I'll plan them out separately.
+
+## Out of scope (guardrails)
+
+- No homepage / discovery-audit modal / proofs / `/briefing` changes.
+- No frontend publish.
+- No Reddit secret work — Bill's job per runbook.
+- No `INGEST_TOKEN` rotation.
+- No edits to VibeCo Labs project files from here — workspace connectors are the only shared surface. Coordination with Claude there happens by you sharing this plan.
+
+## Outcome
+
+After this plan: `hackernews`, `ai_gateway_scout`, `firecrawl`, `anthropic_web_search`, `perplexity_sonar` all active for VibeCo's `/signal` board. Same Firecrawl/Perplexity connections one click away from powering VibeCo Labs. Reddit still waiting on you.
