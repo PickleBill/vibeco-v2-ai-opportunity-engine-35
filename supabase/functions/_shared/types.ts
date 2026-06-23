@@ -194,3 +194,24 @@ export interface AskBillResult {
   model: string;
   latencyMs: number;
 }
+
+// ─── Opportunity Roadmap (Signal Mine: live clusters → build-or-sell roadmap) ───
+
+export interface RoadmapOpportunity {
+  rank: number;
+  title: string;
+  problem: string;
+  build: string;                       // what to build
+  customer: string;                    // who to sell to (ICP)
+  motion: "build" | "sell" | "partner";
+  effort: "S" | "M" | "L";
+  roi: string;                         // directional — labeled illustrative in the UI
+  confidence: number;                  // 0..100
+  based_on: string[];                  // cluster/theme titles this draws from
+}
+
+export interface OpportunityRoadmap {
+  summary: string;
+  market_read: string;
+  opportunities: RoadmapOpportunity[];
+}

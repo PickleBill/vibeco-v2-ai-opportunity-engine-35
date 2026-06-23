@@ -18,6 +18,7 @@ export type TaskType =
   | "quick-classification"  // Fast categorization/routing
   | "pain-classification"   // Signal Mine: label social items (pain/feature/noise)
   | "feedback-synthesis"    // Signal Mine: cluster → feature candidate synthesis
+  | "opportunity-roadmap"   // Signal Mine: live clusters → build-or-sell roadmap
   | "bill-qa";              // bricker-os: corpus-grounded Q&A in Bill's voice
 
 // ─── Model Selection ───
@@ -105,6 +106,11 @@ const ROUTING_TABLE: Record<TaskType, ModelCandidate[]> = {
   "feedback-synthesis": [
     { model: "google/gemini-2.5-pro", rationale: "Reasoning depth to turn a cluster of complaints into a crisp feature candidate", cost: "medium", speed: "medium" },
     { model: "openai/gpt-5", rationale: "Higher-quality fallback", cost: "high", speed: "slow" },
+    { model: "google/gemini-3-flash-preview", rationale: "Fast-mode fallback", cost: "low", speed: "fast" },
+  ],
+  "opportunity-roadmap": [
+    { model: "google/gemini-2.5-pro", rationale: "Strategic reasoning over real clusters into a build-or-sell roadmap", cost: "medium", speed: "medium" },
+    { model: "openai/gpt-5", rationale: "Higher-quality strategic fallback", cost: "high", speed: "slow" },
     { model: "google/gemini-3-flash-preview", rationale: "Fast-mode fallback", cost: "low", speed: "fast" },
   ],
   "bill-qa": [

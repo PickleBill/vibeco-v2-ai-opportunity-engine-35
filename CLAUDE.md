@@ -43,6 +43,10 @@ All agents follow the same pattern: receive JSON → construct system prompt →
 | `orchestrate` | Auto-Thunderdome: 7 agents parallel + synthesis | Multi-model | N/A (orchestrator) |
 | `auto-evaluate` | **Flywheel**: raw idea → simulate → thunderdome → synthesize → score | Multi-model | N/A (pipeline) |
 | `ask-bill` | **bricker-os**: corpus-grounded Q&A for Bill's dynamic résumé terminal (corpus fetched from the Brick repo's GitHub Pages; public endpoint, rate-limited) | Claude 3.5 Sonnet / 3 Haiku | None (plain text answer) |
+| `signal-collect` | **Signal Mine** Stage 1: collect pain signals. Official Reddit API (primary, server-side) → Firecrawl/synth (legacy demo) | Gemini Flash (synth) | None (collector) |
+| `signal-process` | **Signal Mine** Stages 2-4: classify → cluster → synthesize → feature candidates + durable themes | Gemini 2.5-pro / GPT-5 | `generate_*` (see agents/signal-mine) |
+| `ingest-signal` | **Signal Mine** external bridge: scanner POSTs `social-signal-scan/v1`; bearer-auth, idempotent per `(product_tag, scan_date)` | None | None (ingest) |
+| `opportunity-roadmap` | **AI Opportunity Engine**: build-or-sell roadmap over the live Signal Mine clusters (what to build, who to sell to, effort/ROI) | Gemini 2.5-pro / GPT-5 | `generate_opportunity_roadmap` |
 
 ### Shared Agent Infrastructure (`supabase/functions/_shared/`)
 
@@ -60,6 +64,8 @@ Shared code lives here. Supabase convention: `_shared/` prefix means it's not de
 ### Database (Supabase PostgreSQL)
 
 Key tables: `idea_reports` (simulation state), `idea_perspectives` (persona results), `simulator_captures` (session backup), `project_registry` (portfolio), `contact_submissions`, `user_roles`.
+
+**Signal Mine / AI Opportunity Engine tables:** `signal_raw` (collected items), `signal_clusters` (per-scan clusters), `signal_themes` (durable, trend-tracked), `feature_candidates` (ranked candidates), `signal_verticals` (per-vertical scan config driving the nightly cron + board), `opportunity_roadmaps` (AI build-or-sell roadmaps). All public-read, **service-role/admin-write** (see `20260623200000_signal_rls_lockdown.sql`). See `docs/AI_OPPORTUNITY_ENGINE_RUNBOOK.md`.
 
 All tables use UUID primary keys, `now()` timestamps, and row-level security (RLS) policies.
 
