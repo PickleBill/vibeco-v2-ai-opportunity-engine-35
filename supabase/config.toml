@@ -2,3 +2,12 @@ project_id = "brpqtaaknxdqkjvzfvlo"
 
 [functions.ingest-signal]
 verify_jwt = false
+
+# Pipeline functions: triggered server-side by the nightly pg_cron jobs (and the
+# owner-gated Run scan button). They use the service role internally; RLS + the
+# RLS-lockdown migration protect the data, so they don't require a user JWT.
+[functions.signal-collect]
+verify_jwt = false
+
+[functions.signal-process]
+verify_jwt = false

@@ -39,6 +39,7 @@ serve(async (req) => {
     const product = body.product || "niceace";
     const productContext = body.product_context || DEFAULT_CONTEXT;
     const limit = Math.min(body.limit || 80, 200);
+    const scanDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC) — board date + ingest parity
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -88,7 +89,8 @@ serve(async (req) => {
           await supabase.from("signal_themes").update({
             pain_score: c.pain_score, score_history: history,
             occurrence_count: ((t?.occurrence_count as number) ?? 1) + 1,
-            candidate_count: c.evidence.member_count, sample_quotes: c.representative_quotes, last_seen: now,
+            candidate_count: c.evidence.member_count, sample_quotes: c.representative_quotes,
+            last_seen: now, scan_date: scanDate,
           }).eq("id", matchedId);
           themes.push({ title: c.cluster_theme, pain_score: c.pain_score, trend: trendOf(history), occurrence_count: ((t?.occurrence_count as number) ?? 1) + 1, score_history: history });
         } else {
@@ -96,6 +98,7 @@ serve(async (req) => {
           const { data: nt } = await supabase.from("signal_themes").insert({
             product_tag: product, title: c.cluster_theme, pain_score: c.pain_score, score_history: history,
             occurrence_count: 1, candidate_count: c.evidence.member_count, sample_quotes: c.representative_quotes,
+            scan_date: scanDate,
           }).select("id").single();
           themeId = nt?.id ?? null;
           themes.push({ title: c.cluster_theme, pain_score: c.pain_score, trend: 0, occurrence_count: 1, score_history: history });
@@ -103,13 +106,14 @@ serve(async (req) => {
 
         // 2) cluster + candidate, linked to the theme
         const { data: cluster } = await supabase.from("signal_clusters")
-          .insert({ product_tag: product, theme: c.cluster_theme, pain_score: c.pain_score, member_count: c.evidence.member_count })
+          .insert({ product_tag: product, theme: c.cluster_theme, pain_score: c.pain_score, member_count: c.evidence.member_count, scan_date: scanDate })
           .select("id").single();
         const { error: fErr } = await supabase.from("feature_candidates").insert({
           cluster_id: cluster?.id, theme_id: themeId, product_tag: product,
           problem: c.problem, proposed_solution: c.proposed_solution,
           representative_quotes: c.representative_quotes, evidence: c.evidence,
           pain_score: c.pain_score, confidence: c.confidence, effort: c.effort, status: "open",
+          scan_date: scanDate,
         });
         if (fErr) console.error("candidate insert:", fErr.message);
       }
