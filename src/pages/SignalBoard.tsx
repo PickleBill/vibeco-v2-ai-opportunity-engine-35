@@ -98,37 +98,65 @@ const SignalBoard = () => {
   const [scanning, setScanning] = useState(false);
   const [counts, setCounts] = useState<{ collected: number; pain: number; clusters: number; candidates: number } | null>(null);
   const [usingSample, setUsingSample] = useState(true);
+  const [productTags, setProductTags] = useState<string[]>([]);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [latestScanDate, setLatestScanDate] = useState<string | null>(null);
 
-  // Try to load persisted candidates + durable themes on mount (falls back to sample).
+  // Discover available product_tags (verticals) from the most recently ingested data.
   useEffect(() => {
     (async () => {
       try {
-        const { data, error } = await (supabase as any)
+        const { data } = await (supabase as any)
           .from("feature_candidates")
-          .select("*")
-          .eq("status", "open")
-          .order("pain_score", { ascending: false })
-          .limit(30);
+          .select("product_tag, scan_date")
+          .not("product_tag", "is", null)
+          .order("scan_date", { ascending: false, nullsFirst: false })
+          .limit(500);
+        if (data && data.length) {
+          const tags = Array.from(new Set(data.map((r: any) => r.product_tag).filter(Boolean))) as string[];
+          setProductTags(tags);
+          if (tags.length && !activeTag) setActiveTag(tags[0]);
+        }
+      } catch { /* tables missing — keep sample */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load candidates + themes (optionally filtered by active product_tag).
+  useEffect(() => {
+    (async () => {
+      try {
+        let cQuery: any = (supabase as any)
+          .from("feature_candidates").select("*").eq("status", "open")
+          .order("pain_score", { ascending: false }).limit(60);
+        if (activeTag) cQuery = cQuery.eq("product_tag", activeTag);
+        const { data, error } = await cQuery;
         if (!error && data && data.length) {
           setCandidates(data as Candidate[]);
           setUsingSample(false);
+          const dates = data.map((r: any) => r.scan_date).filter(Boolean).sort();
+          setLatestScanDate(dates.length ? dates[dates.length - 1] : null);
+        } else if (activeTag) {
+          setCandidates([]);
+          setUsingSample(false);
         }
-        const { data: th } = await (supabase as any)
-          .from("signal_themes")
-          .select("*")
-          .eq("status", "open")
-          .order("pain_score", { ascending: false })
-          .limit(12);
+        let tQuery: any = (supabase as any)
+          .from("signal_themes").select("*").eq("status", "open")
+          .order("pain_score", { ascending: false }).limit(12);
+        if (activeTag) tQuery = tQuery.eq("product_tag", activeTag);
+        const { data: th } = await tQuery;
         if (th && th.length) {
           setThemes(th.map((t: any) => ({
             id: t.id, title: t.title, pain_score: t.pain_score, occurrence_count: t.occurrence_count,
             score_history: t.score_history ?? [],
             trend: (t.score_history?.length ?? 0) >= 2 ? Math.round(t.score_history.at(-1).s - t.score_history.at(-2).s) : 0,
           })));
+        } else if (activeTag) {
+          setThemes([]);
         }
       } catch { /* tables not migrated yet — keep sample */ }
     })();
-  }, []);
+  }, [activeTag]);
 
   const runScan = async () => {
     setScanning(true);
