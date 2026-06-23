@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { HelmetProvider, Helmet } from "react-helmet-async";
-import { Radar, Sparkles, ArrowUpRight, X, Quote, Loader2, TrendingUp, Radio, Plus, Clock, AlertTriangle } from "lucide-react";
+import { Radar, Sparkles, ArrowUpRight, X, Quote, Loader2, TrendingUp, Radio, Plus, Clock, AlertTriangle, Map } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
@@ -76,6 +76,13 @@ const SAMPLE_THEMES: Theme[] = [
   { title: "Settle-up after side bets is awkward", pain_score: 72, trend: -4, occurrence_count: 4, score_history: [{ t: "", s: 80 }, { t: "", s: 79 }, { t: "", s: 76 }, { t: "", s: 72 }] },
   { title: "Distrust of payout legitimacy", pain_score: 68, trend: 12, occurrence_count: 3, score_history: [{ t: "", s: 44 }, { t: "", s: 56 }, { t: "", s: 68 }] },
 ];
+
+// AI-drafted build-or-sell roadmap over the live clusters (opportunity_roadmaps).
+interface RoadmapOpp {
+  rank: number; title: string; problem: string; build: string; customer: string;
+  motion: string; effort: string; roi: string; confidence: number; based_on: string[];
+}
+interface Roadmap { summary: string; market_read: string; opportunities: RoadmapOpp[]; }
 
 // A configured vertical (niche the engine listens to) — from signal_verticals.
 interface Vertical {
@@ -161,6 +168,8 @@ const SignalBoard = () => {
   const [newVertical, setNewVertical] = useState("");
   const [newSubs, setNewSubs] = useState("");
   const [newKeywords, setNewKeywords] = useState("");
+  const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
+  const [drafting, setDrafting] = useState(false);
 
   // Owner gate: Promote/Dismiss and Run scan mutate the board, so they're
   // limited to an authenticated admin. RLS enforces this server-side too;
@@ -239,6 +248,13 @@ const SignalBoard = () => {
           ...((th ?? []) as any[]).map((t) => t.scan_date),
         ].filter(Boolean).sort();
         setLatestScanDate(allDates.length ? allDates[allDates.length - 1] : null);
+
+        // Cached AI roadmap for this vertical (most recent).
+        const { data: rm } = await (supabase as any)
+          .from("opportunity_roadmaps").select("*").eq("product_tag", activeTag)
+          .order("generated_at", { ascending: false }).limit(1);
+        const r0 = (rm ?? [])[0];
+        setRoadmap(r0 ? { summary: r0.summary ?? "", market_read: r0.market_read ?? "", opportunities: r0.opportunities ?? [] } : null);
       } catch { /* keep what we have */ }
       finally { setLoading(false); }
     })();
@@ -276,6 +292,25 @@ const SignalBoard = () => {
       toast.error(`Scan failed: ${e?.message ?? "unknown"}`);
     } finally {
       setScanning(false);
+    }
+  };
+
+  // Admin drafts the AI build-or-sell roadmap over the live clusters.
+  const draftRoadmap = async () => {
+    const cfg = verticals.find((v) => v.product_tag === activeTag) ?? null;
+    setDrafting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("opportunity-roadmap", {
+        body: { product: activeTag, vertical: cfg?.vertical ?? activeTag, persist: true },
+      });
+      if (error) throw error;
+      const rm = (data as any)?.roadmap;
+      if (rm) setRoadmap(rm);
+      toast.success("Roadmap drafted from live signal");
+    } catch (e: any) {
+      toast.error(`Roadmap failed: ${e?.message ?? "unknown"}`);
+    } finally {
+      setDrafting(false);
     }
   };
 
@@ -462,6 +497,67 @@ const SignalBoard = () => {
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Opportunity roadmap — AI reasoning over the live clusters */}
+          {!isSample && (roadmap || (isAdmin && !isEmpty)) && (
+            <div className="mt-8">
+              <div className="flex flex-wrap items-center gap-2">
+                <Map className="h-5 w-5 text-primary" />
+                <h2 className="font-display text-lg font-bold">Opportunity roadmap</h2>
+                <span className="text-xs text-muted-foreground">AI-drafted over the live clusters · build-or-sell</span>
+                {isAdmin && (
+                  <Button size="sm" variant="outline" className="ml-auto gap-1.5" onClick={draftRoadmap} disabled={drafting || isEmpty}>
+                    {drafting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    {roadmap ? "Redraft" : "Draft roadmap"}
+                  </Button>
+                )}
+              </div>
+
+              {roadmap ? (
+                <div className="mt-3 space-y-3">
+                  <Card className="border-primary/20 bg-primary/5 p-4">
+                    <p className="text-sm">{roadmap.summary}</p>
+                    {roadmap.market_read && <p className="mt-2 text-xs text-muted-foreground">{roadmap.market_read}</p>}
+                  </Card>
+                  {roadmap.opportunities.map((o) => (
+                    <Card key={o.rank} className="p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-display text-sm font-extrabold text-primary">#{o.rank}</span>
+                        <h3 className="font-display text-base font-bold">{o.title}</h3>
+                        <div className="ml-auto flex items-center gap-1.5">
+                          <Badge variant={o.motion === "build" ? "default" : "secondary"} className="capitalize">{o.motion}</Badge>
+                          <Badge variant="outline">effort {o.effort}</Badge>
+                          <Badge variant="outline">{o.confidence}% conf</Badge>
+                        </div>
+                      </div>
+                      <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+                        <div>
+                          <div className="text-[11px] font-semibold uppercase tracking-widest text-primary">Build</div>
+                          <p className="mt-0.5">{o.build}</p>
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Sell to</div>
+                          <p className="mt-0.5">{o.customer}</p>
+                        </div>
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">ROI (directional):</span> {o.roi}
+                      </p>
+                      {o.based_on?.length > 0 && (
+                        <p className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground/70">
+                          based on: {o.based_on.join(" · ")}
+                        </p>
+                      )}
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="mt-3 p-6 text-center text-sm text-muted-foreground">
+                  No roadmap yet. Draft one to turn the live pains into ranked build-or-sell opportunities.
+                </Card>
+              )}
             </div>
           )}
 

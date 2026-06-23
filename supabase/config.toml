@@ -11,3 +11,8 @@ verify_jwt = false
 
 [functions.signal-process]
 verify_jwt = false
+
+# Roadmap drafting: admin-triggered from the board; reasons over live rows via
+# the AI Gateway and persists with the service role.
+[functions.opportunity-roadmap]
+verify_jwt = false
