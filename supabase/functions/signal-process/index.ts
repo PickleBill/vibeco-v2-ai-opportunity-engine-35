@@ -65,7 +65,28 @@ serve(async (req) => {
 
     if (!items.length) return jsonResponse({ product, counts: { collected: 0, pain: 0, clusters: 0, candidates: 0 }, candidates: [] });
 
-    const result = await runSignalMine({ items, product, product_context: productContext, mode: body.mode });
+    // ── Idempotency guard ──────────────────────────────────────────────────
+    // When persisting DB-loaded rows, CLAIM them (mark processed) up front so a
+    // concurrent invocation or a re-run can't grab the same rows and produce
+    // duplicate candidates. On a HARD mesh failure we un-claim below so the rows
+    // are retried next run (never silently dropped, never duplicated).
+    const claimedIds = loadedRows.map((r) => r.id);
+    if (body.persist && supabase && claimedIds.length) {
+      const { error } = await supabase.from("signal_raw").update({ processed: true }).in("id", claimedIds);
+      if (error) console.error("claim rows:", error.message);
+    }
+
+    let result;
+    try {
+      result = await runSignalMine({ items, product, product_context: productContext, mode: body.mode });
+    } catch (e) {
+      // Hard failure (classify/cluster threw) — release the claim so the rows
+      // aren't stranded as "processed" with no candidates, and surface the error.
+      if (body.persist && supabase && claimedIds.length) {
+        await supabase.from("signal_raw").update({ processed: false }).in("id", claimedIds);
+      }
+      throw e;
+    }
 
     // Persist clusters + candidates (Stage 4) + durable themes (Pulse P1).
     const themes: { title: string; pain_score: number; trend: number; occurrence_count: number; score_history: { t: string; s: number }[] }[] = [];
@@ -85,7 +106,11 @@ serve(async (req) => {
         let themeId = matchedId;
         if (matchedId) {
           const { data: t } = await supabase.from("signal_themes").select("score_history, occurrence_count").eq("id", matchedId).single();
-          const history = [...((t?.score_history as any[]) ?? []), { t: now, s: c.pain_score, c: c.evidence.member_count }].slice(-30);
+          // Idempotent per scan_date: drop any existing point from today before
+          // appending, so multiple batches / re-runs on the same day keep ONE
+          // point per day instead of polluting the trend sparkline.
+          const prior = ((t?.score_history as any[]) ?? []).filter((p) => String(p?.t ?? "").slice(0, 10) !== scanDate);
+          const history = [...prior, { t: now, s: c.pain_score, c: c.evidence.member_count }].slice(-30);
           await supabase.from("signal_themes").update({
             pain_score: c.pain_score, score_history: history,
             occurrence_count: ((t?.occurrence_count as number) ?? 1) + 1,
@@ -117,12 +142,8 @@ serve(async (req) => {
         });
         if (fErr) console.error("candidate insert:", fErr.message);
       }
-
-      if (loadedRows.length) {
-        const ids = loadedRows.map((r) => r.id);
-        const { error } = await supabase.from("signal_raw").update({ processed: true }).in("id", ids);
-        if (error) console.error("mark processed:", error.message);
-      }
+      // Note: rows were already claimed (marked processed) up front — see the
+      // idempotency guard above — so there is no separate mark-processed here.
     }
 
     return jsonResponse({ ...result, themes });
