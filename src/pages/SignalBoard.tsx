@@ -183,6 +183,9 @@ const SignalBoard = () => {
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [evidenceCache, setEvidenceCache] = useState<Record<string, RawSignal[]>>({});
+  const [verticalEvidenceCount, setVerticalEvidenceCount] = useState<number | null>(null);
+  const [verticalEvidenceSamples, setVerticalEvidenceSamples] = useState<RawSignal[]>([]);
+  const [expandedOpp, setExpandedOpp] = useState<number | null>(null);
 
   useEffect(() => {
     (async () => {
