@@ -1,91 +1,97 @@
-## TL;DR recommendation
+# Living roadmap — VibeCo v1 + VibeCo Labs (v2.1)
 
-**Keep two projects, one contract.** Do not collapse v1 (this repo) and v2.1 (VibeCo Labs) into one codebase right now. Ship v1 to publish this week as the lightweight "proofs + sketchpad" front door. Let v2.1 keep being the heavier Hub/engine workbench. They already share state through the MCP contract Claude designed — that's the right seam.
+> Single source of truth for both Lovable agent (frontend) and Claude Code
+> (backend). Update whenever a phase ships or scope changes. Both sides grep
+> this before starting work.
 
-Reasoning, the PR, and the next phases below.
+## Two-project model (approved this turn)
 
----
+- **v1 (this repo, `conviction-to-code.lovable.app`)** — publishable front door.
+  Home → Signal → Sketchpad → Portfolio. Lightweight.
+- **v2.1 (VibeCo Labs)** — engine + Hub + Connectors + Decisions + MCP workbench.
+- **Seam**: shared `org_decisions` / `connector_registry` / `signal_*` tables via MCP,
+  governed by root-level `CONNECTOR_CONTRACT.md` + `WORKSPACE_MAP.md`.
+- **Reuse direction**: UX patterns flow v1 → v2.1 (lighter wins). Backend
+  resilience flows v2.1 → v1 (harder wins).
+- **Revisit collapse** only after v1 publishes and v2.1 Hub stabilizes (~60 days).
 
-## 1) The PR — who merges, and what I checked
+## Coordination rule
 
-- The Claude PR (`#2 V2.1 backend closeout`, branch `claude/peaceful-dirac-nszyih`, +644/-23 across 8 files) lives in your **GitHub** repo (`PickleBill/vibeco-v2-ai-opportunity-engine-35`). That is **v2.1's** repo, not this one. Lovable's mirror for this project doesn't have that branch — I confirmed.
-- **You merge it on GitHub.** I can't push to that repo from here, and merging it would change v2.1's code, not v1's. Lovable's two-way sync will pull it into the v2.1 Lovable project automatically after merge.
-- The PR body matches what we expected from Claude's backend close-out: hardened `_shared/llm-client.ts` (timeouts, exponential backoff, Anthropic-direct fallback on 429/402/403/5xx), new `_shared/resilience.ts`, **idempotency guard in `signal-process**` (claim rows before mesh runs so re-runs can't duplicate candidates, release on failure), `error-handler` surfaces `403 credit_limit_reached` as "AI credits exhausted", `model-router.anthropicDirectFallbackModel()`, 17 unit tests, `tools/signal-harness/fill-board.sh`. Build green, tests pass, no new lint.
-- **Collision risk vs our work here:** zero. All eight files are under `supabase/functions/_shared/**` + `tools/**` + tests. We only touched `src/**` and `.lovable/plan.md` this turn. Safe to merge.
-- **What to port back to Claude / v2.1 after merge** (so it stops drifting from us):
-  - `.lovable/plan.md` shape (living roadmap)
-  - `src/hooks/useActiveVertical.ts`
-  - SignalBoard search + "Sketch this idea" handoff pattern
-  - `mem://patterns/prompt-component-reuse` conventions
-  - The "Idea-stage sketchpad" reframing on `/simulate`
+Lovable agent owns `src/**`, `docs/**`, `mem://**`, `.lovable/**`, root contract docs.
+Claude Code owns `supabase/functions/**` and `supabase/migrations/**`.
+Either side touching the other's surface must announce it here first.
 
-I'd open a small PR back to v2.1 with those — Claude will pick them up next session.
+## Phase index
 
----
+| # | Phase | Owner | Status |
+|---|---|---|---|
+| 0 | Adapter layer + workspace connectors (Firecrawl, Perplexity, Anthropic) | Lovable | DONE |
+| 1 | Global IA + Nav + Footer (Signal + Sketchpad surfaced) | Lovable | DONE |
+| 2 | Active-vertical context (`useActiveVertical` hook) | Lovable | DONE |
+| 3 | `/signal` search + LIVE/SAMPLE badge | Lovable | DONE |
+| 4 | Home scan → Signal handoff (link-level) | Lovable | DONE |
+| 5 | Copy deck refresh (AI Opportunity Engine framing) | Lovable | DONE |
+| 6 | `/simulate` fold-in as "Idea-stage sketchpad" + cross-links | Lovable | DONE |
+| 7 | Auto-grader + refine loop | Lovable + Claude | **DEFERRED to post-publish — "get it to shippable" first** |
+| 8 | Publish-readiness pass — design tokens audit, 375px mobile pass, empty states, copy polish, SEO verify, console-error sweep, + root contract docs (`CONNECTOR_CONTRACT.md`, `WORKSPACE_MAP.md`) | Lovable | **NEXT** |
+| 9 | Sketchpad → Proofs evolution (promote a sketch to a Proofs card; no new backend) | Lovable | QUEUED |
+| 10 | Publish to `conviction-to-code.lovable.app` | Lovable | QUEUED |
+| 11 | Port v1 patterns back to v2.1 (small PR: `useActiveVertical`, SignalBoard search, sketchpad reframe, plan.md shape) | Bill drives, Lovable drafts | QUEUED |
+| 12 | **Visual design rework** — Impeccable skills + cold-design inspiration across both projects | Lovable | POST-PUBLISH |
+| B1 | Backfill `opportunity_roadmaps` from unprocessed `signal_raw` rows | Claude Code | IN FLIGHT |
+| B2 | Reddit secrets (`REDDIT_CLIENT_ID/SECRET`) | Bill | TODO |
+| B3 | v2.1 PR #2 — LLM client hardening + idempotent `signal-process` | Bill / Claude | **MERGED** |
 
-## 2) Mono-repo vs two projects — my take
+## Workspace connectors
 
-You're right that there's a real sprawl risk. But the cost of merging now is higher than the cost of running two:
+- Active: Firecrawl (pickle), Perplexity, Anthropic — sufficient for v1 publish.
+- Linear / Notion: **SKIP for now** (revisit after publish).
+- Telemetry (Sentry, PostHog, Amplitude): defer until after publish.
 
+## Skills
 
-| Factor         | Merge to one repo now                                                                                                                                               | Keep two                                                                                                                              |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Supabase       | v1 + v2.1 are on **different Supabase projects**. Merging means picking one and porting tables, RLS, functions, and the connector/MCP schema. Multi-day, high risk. | No move. Each already wired.                                                                                                          |
-| Shipping speed | Blocks publish — you'd be migrating instead of polishing.                                                                                                           | Publish v1 this week.                                                                                                                 |
-| Surface area   | Forces premature decisions about whether Hub, Connectors, Decisions, MCP live behind the marketing front door.                                                      | v1 stays small (Home + Signal + Sketchpad + Portfolio + Briefing). v2.1 stays the workbench.                                          |
-| Drift          | Eliminates it.                                                                                                                                                      | Real risk, but mitigated by the contract doc (`CONNECTOR_CONTRACT.md` in v2.1) + shared `org_decisions`/`connector_registry` via MCP. |
-| Reuse          | Single component tree.                                                                                                                                              | We've already proven cross-pollination works (adapter shape, signal_raw schema, sketchpad pattern).                                   |
+No new skills authored yet. Built-ins (`learn`, `go`, `skill-creator`, Impeccable suite)
+cover today's needs. Author a new skill only when both projects start repeating
+the same non-obvious procedure (e.g. "publish-readiness audit").
 
+## Current data state (last verified)
 
-**Recommendation:** keep two, with these rules:
+- `signal_raw`: 846 rows
+- `signal_themes`: 4 rows
+- `feature_candidates`: 4 rows (all `wholesale-distribution-3pl`)
+- `opportunity_roadmaps`: backfilling under B1
+- `signal_verticals`: 1 enabled (`wholesale-distribution-3pl`, 7d lookback)
 
-1. **v1 (this repo) = publishable product surface.** Home → Signal Board → Sketchpad → Portfolio. Optimized for a stranger landing cold. Lightweight, fast, real data.
-2. **v2.1 (VibeCo Labs) = engine + workbench.** Hub, ConnectorsTab, Decisions, deeper Opportunity Engine, MCP server, internal tooling.
-3. **The seam** is the shared `org_decisions` / `connector_registry` / `signal_*` tables, accessed via MCP and the `CONNECTOR_CONTRACT.md`. Either side writes; either side reads.
-4. **One-way reuse rule:** UX patterns flow v1 → v2.1 (lighter wins). Backend resilience flows v2.1 → v1 (harder wins).
-5. **Sketchpad-as-Proofs idea you raised:** worth doing — but as v1's evolution of the sketchpad, not as a merge trigger. Phase it (below).
+## Active adapters (in `signal-collect`)
 
-If in 60 days v1 is publishable and v2.1's Hub features stabilize, **then** reconsider folding v2.1's workbench in as an `/admin` surface here. Don't pay that cost until you've proven the front door works.
+| Adapter | Status |
+|---|---|
+| hackernews | active (keyless) |
+| ai_gateway_scout | active |
+| firecrawl (pickle) | active |
+| perplexity_sonar | active |
+| anthropic_web_search | active (`claude-sonnet-4-5`) |
+| reddit | dormant — needs B2 |
 
----
+## Reuse principles (apply to every new prompt, both projects)
 
-## 3) Workspace setup (knowledge, skills, connectors) — what to do once
+1. Reuse the adapter shape (`{ name, isConfigured, collect }`), `_shared/llm-client`, `_shared/model-router`, `signal_raw` schema.
+2. Frontend: reuse `Navbar`, `Footer`, `FadeIn`, `Card`, `Badge`, shadcn primitives, `DiscoveryAuditProvider`, semantic tokens. Don't fork.
+3. Cross-link surfaces instead of duplicating them (`/signal` ↔ `/simulate` ↔ Home scan).
+4. Real data only — SAMPLE badge required when illustrative.
+5. New surfaces follow `mem://patterns/prompt-component-reuse`.
 
-**Connectors (workspace-level):**
+## Out of scope (guardrails)
 
-- Already done: Firecrawl (pickle), Perplexity.
-- Recommended to add now: **Linear** (issue tracking across both projects), **Notion** (if you want a shared doc surface for Claude to read). Skip GitHub MCP — Lovable's git sync already covers it.
-- Skip until needed: Sentry, PostHog, Amplitude (only when v1 is published and you want telemetry).
+- Homepage hero core narrative, discovery-audit modal, `/briefing`, `ProofShowcase`.
+- v1 ↔ v2.1 monorepo collapse (revisit in ~60 days).
+- `src/integrations/supabase/client.ts`, `types.ts`, `.env`.
+- VibeCo Labs project files (separate project; workspace connectors + contract docs are the only shared surface).
 
-**Workspace knowledge:** the only thing worth promoting from project-level to workspace-level right now is the `CONNECTOR_CONTRACT.md` + a 1-pager "Courtana repo map" (which project owns what). I'll draft both.
+## TL;DR strategic rationale
 
-**Skills:** don't author new ones yet. The built-ins (`learn`, `go`, `skill-creator`, the Impeccable skills already in this repo) cover today's needs. Add a skill only when we catch ourselves repeating a non-obvious procedure across both projects (e.g. "publish-readiness audit").
-
----
-
-## 4) Phases — finishing v1 to publishable
-
-Each phase is one batch unless noted. All frontend unless flagged.
-
-**Phase 7 — Auto-grader + refine loop** (was on hold). Unblocked now that Claude's PR is merge-ready. New `grade-prompt` edge function + `prompt_grades` table + UI loop on `/simulate`. *Touches* `supabase/**` *and migrations — I'll announce in* `.lovable/plan.md` *first to avoid colliding with anything Claude does next.  -> **FWIW  we're going to need a pretty big visual design pass. The stuff you're talking about is all technical and piping and UX, which is important, but there's a lot of this we can kind of roll up into using the impeccable skill sets and also possibly cold design for some inspiration. Why don't you just put a note there that's like "Get it to shippable", and then let's come back to this overall design rework after we publish a version? Sound good*** 
-
-**Phase 8 — Publish-readiness pass.** Design tokens audit (no hardcoded colors), 375px mobile pass on Home/Signal/Sketchpad/Portfolio/Briefing, empty states, copy polish, SEO (title/meta/OG/favicon already set — I'll verify), `robots.txt` + `sitemap.xml` sanity, console-error sweep. Two batches.
-
-**Phase 9 — Sketchpad → Proofs evolution** (the idea you raised). Repurpose the sketchpad so a finished sketch can be "promoted to Proofs" — i.e. a shareable artifact card that lives next to existing `ProofShowcase` entries. Same engine, new surface, no new backend. One batch.
-
-**Phase 10 — Publish.** `preview_ui--publish` against `conviction-to-code.lovable.app` after a final verification checklist. Custom domain stays as-is.
-
-**Phase 11 — Port back to v2.1.** Small PR with the v1 patterns listed in §1. You drive the merge over there.
-
-**Held / out of scope:** Reddit secrets (B2 — still on you), full v1↔v2.1 collapse, paid tiers.
-
----
-
-## What I need from you to proceed
-
-1. Confirm: **merge Claude's PR on GitHub yourself** (I'll wait for it before touching `supabase/**` in Phase 7).   merged!!
-2. Confirm: **two-project model + Phase 7→10 order** is what you want. - yep i think so!
-3. Decision: **add Linear and Notion workspace connectors** now, or skip?  
-4. Decision: any objection to me drafting `CONNECTOR_CONTRACT.md` (root) + `WORKSPACE_MAP.md` (root) as part of Phase 8 so both Claude and I read the same source of truth?  LOVEEE THIS!
-
-I'll update `.lovable/plan.md` with whatever you green-light and start Phase 7 the moment the PR is in.
+Merging v1 + v2.1 now means migrating two Supabase projects, RLS, and the MCP
+schema before publishing — multi-day, high risk, blocks the publish. Keeping
+two repos with a shared contract is faster to ship, mitigates drift via the
+shared tables, and preserves the lighter "front door" vs heavier "workbench"
+separation. Phase 12 reconsiders collapse only after v1 is live.
