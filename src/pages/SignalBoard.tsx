@@ -555,43 +555,58 @@ const SignalBoard = () => {
 
             {/* ── Sticky filter / sort / search. Up top, not buried. ── */}
             {!isSample && !isEmpty && (
-              <div className="sticky top-16 z-10 -mx-2 mt-6 rounded-xl border border-border bg-background/85 backdrop-blur px-2 py-2">
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="sticky top-16 z-10 -mx-2 mt-6 rounded-xl border border-border bg-background/90 backdrop-blur px-2 py-2.5">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
                   <div className="relative flex-1 min-w-[180px]">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Search problems, quotes, themes…"
-                      className="h-8 pl-8 text-xs"
+                      className="h-10 pl-9 text-sm"
                     />
                   </div>
                   <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-                    <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-10 w-full sm:w-[180px] text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pain">Sort: most painful</SelectItem>
+                      <SelectItem value="pain">Sort: loudest pain</SelectItem>
                       <SelectItem value="confidence">Sort: most confident</SelectItem>
                       <SelectItem value="recent">Sort: most evidence</SelectItem>
                     </SelectContent>
                   </Select>
-                  {allSources.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1">
-                      <button
-                        onClick={() => setSourceFilter(null)}
-                        className={`text-[11px] px-2 py-1 rounded-full border transition ${!sourceFilter ? "bg-primary/15 border-primary/40 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
-                      >All sources</button>
-                      {allSources.map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => setSourceFilter(s === sourceFilter ? null : s)}
-                          className={`text-[11px] px-2 py-1 rounded-full border transition ${sourceFilter === s ? "bg-primary/15 border-primary/40 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
-                        >{niceSource(s)}</button>
-                      ))}
-                    </div>
-                  )}
                 </div>
+                {allSources.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground mr-1">Source:</span>
+                    <button
+                      onClick={() => setSourceFilter(null)}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition ${!sourceFilter ? "bg-primary/15 border-primary/40 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
+                    >All</button>
+                    {allSources.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setSourceFilter(s === sourceFilter ? null : s)}
+                        className={`text-xs px-2.5 py-1 rounded-full border transition ${sourceFilter === s ? "bg-primary/15 border-primary/40 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
+                      >{niceSource(s)}</button>
+                    ))}
+                  </div>
+                )}
+                {(query || sourceFilter) && (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>
+                      Showing <span className="text-foreground font-medium">{visible.length}</span> of {candidates.length}
+                    </span>
+                    <button
+                      onClick={() => { setQuery(""); setSourceFilter(null); }}
+                      className="text-primary hover:brightness-110 font-medium"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                )}
               </div>
             )}
+
 
             {/* themes strip moved below roadmap */}
 
