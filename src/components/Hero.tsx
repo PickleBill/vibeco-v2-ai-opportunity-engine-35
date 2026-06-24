@@ -95,17 +95,17 @@ const Hero = () => {
             <FadeIn delay={0.55}>
               <div className="flex flex-wrap gap-4">
                 <button
-                  onClick={openDiscovery}
+                  onClick={() => scrollTo("#scan")}
                   className="font-display text-sm font-semibold bg-violet text-violet-foreground px-7 py-3.5 rounded-full hover:brightness-110 transition-all inline-flex items-center gap-2 shadow-violet"
                 >
-                  Book a discovery audit
+                  Run an opportunity scan
                   <ArrowRight size={16} />
                 </button>
                 <button
-                  onClick={() => scrollTo("#scan")}
-                  className="text-sm font-medium border border-primary/40 text-primary px-7 py-3.5 rounded-full hover:bg-primary/10 transition-colors"
+                  onClick={openDiscovery}
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground underline underline-offset-4 decoration-muted-foreground/40 hover:decoration-foreground transition-colors px-2"
                 >
-                  Run an opportunity scan
+                  Book a discovery audit
                 </button>
               </div>
             </FadeIn>
