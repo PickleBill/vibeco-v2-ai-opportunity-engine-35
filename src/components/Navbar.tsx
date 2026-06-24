@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, ArrowRight, User, History, FolderKanban } from "lucide-react";
+import { Menu, X, ArrowRight, User, History, FolderKanban, Radar, Sparkles } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useDiscoveryAudit } from "./discovery/DiscoveryAuditProvider";
 
-const navLinks = [
+// Anchor links scroll on the homepage; route links jump to a page.
+const navLinks: { label: string; href: string; route?: string }[] = [
   { label: "How it works", href: "#model" },
+  { label: "Signal", href: "/signal", route: "/signal" },
+  { label: "Sketchpad", href: "/simulate", route: "/simulate" },
   { label: "Proofs", href: "#proofs" },
-  { label: "Scan", href: "#scan" },
 ];
 
 const Navbar = () => {
@@ -35,12 +37,16 @@ const Navbar = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleNavClick = (href: string) => {
+  const handleNavClick = (link: { href: string; route?: string }) => {
     setMobileOpen(false);
+    if (link.route) {
+      navigate(link.route);
+      return;
+    }
     if (location.pathname !== "/") {
-      navigate("/" + href);
+      navigate("/" + link.href);
     } else {
-      const el = document.querySelector(href);
+      const el = document.querySelector(link.href);
       el?.scrollIntoView({ behavior: "smooth" });
     }
   };
@@ -67,15 +73,22 @@ const Navbar = () => {
 
         {/* Desktop */}
         <div className="hidden md:flex items-center gap-6">
-          {navLinks.map((link) => (
-            <button
-              key={link.href}
-              onClick={() => handleNavClick(link.href)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
-            >
-              {link.label}
-            </button>
-          ))}
+          {navLinks.map((link) => {
+            const isActive = link.route && location.pathname.startsWith(link.route);
+            const Icon = link.route === "/signal" ? Radar : link.route === "/simulate" ? Sparkles : null;
+            return (
+              <button
+                key={link.href}
+                onClick={() => handleNavClick(link)}
+                className={`text-sm transition-colors duration-200 flex items-center gap-1.5 ${
+                  isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {Icon && <Icon size={12} />}
+                {link.label}
+              </button>
+            );
+          })}
 
           {/* Auth */}
           {user ? (
@@ -144,15 +157,19 @@ const Navbar = () => {
             exit={{ opacity: 0, y: -10 }}
             className="md:hidden bg-background border-b border-border px-6 pb-6"
           >
-            {navLinks.map((link) => (
-              <button
-                key={link.href}
-                onClick={() => handleNavClick(link.href)}
-                className="block py-3 text-sm text-muted-foreground hover:text-foreground transition-colors w-full text-left"
-              >
-                {link.label}
-              </button>
-            ))}
+            {navLinks.map((link) => {
+              const Icon = link.route === "/signal" ? Radar : link.route === "/simulate" ? Sparkles : null;
+              return (
+                <button
+                  key={link.href}
+                  onClick={() => handleNavClick(link)}
+                  className="flex items-center gap-2 py-3 text-sm text-muted-foreground hover:text-foreground transition-colors w-full text-left"
+                >
+                  {Icon && <Icon size={13} />}
+                  {link.label}
+                </button>
+              );
+            })}
             {user ? (
               <>
                 <a

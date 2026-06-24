@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import FadeIn from "./FadeIn";
 import { useDiscoveryAudit } from "./discovery/DiscoveryAuditProvider";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Sparkles, FileText, Mail, CalendarClock, Phone, Inbox } from "lucide-react";
+import { ArrowRight, Sparkles, FileText, Mail, CalendarClock, Phone, Inbox, Radar } from "lucide-react";
 
 type Suggestion = { icon: typeof Mail; title: string; detail: string };
 
@@ -31,6 +32,7 @@ function scan(text: string): Suggestion[] {
 
 const OpportunityScan = () => {
   const { open: openDiscovery } = useDiscoveryAudit();
+  const navigate = useNavigate();
   const [text, setText] = useState("");
   const [results, setResults] = useState<Suggestion[] | null>(null);
 
@@ -116,6 +118,21 @@ const OpportunityScan = () => {
                 >
                   Book a discovery audit
                   <ArrowRight size={15} />
+                </button>
+              </div>
+
+              {/* Handoff into the live Opportunity Engine — same engine, real signal. */}
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface/60 p-4">
+                <p className="text-xs text-muted-foreground leading-relaxed flex-1 min-w-[12rem]">
+                  Want to see the live Opportunity Engine reading real pain across a vertical right now?
+                </p>
+                <button
+                  onClick={() => navigate("/signal")}
+                  className="text-xs font-semibold text-primary hover:brightness-110 inline-flex items-center gap-1.5"
+                >
+                  <Radar size={13} />
+                  Open the Signal Board
+                  <ArrowRight size={12} />
                 </button>
               </div>
             </motion.div>

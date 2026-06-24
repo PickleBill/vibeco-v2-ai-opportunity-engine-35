@@ -1,65 +1,73 @@
+# Living roadmap — VibeCo + parallel Claude Code backend
 
-# Wire the dormant adapters — workspace-level, reusable across projects
+> Single source of truth that Lovable agent (frontend) and Claude Code (backend)
+> both read. Update this file whenever a phase ships or scope changes. Both
+> sides should grep this before starting work.
 
-## Where we are right now (verified, not guessed)
+Last updated: this turn.
 
-**Workspace connections** (visible to every project you own, including VibeCo Labs):
-- `pickle` (Firecrawl) — **Connected, Managed, not yet linked to this project**. Same connection you set up 18 days ago. Yes, this is reusable across projects — that's the whole point of workspace connections.
-- ElevenLabs, Stripe sandbox, Courtana gDrive, Bill's TikTok — all linkable.
-- **Perplexity** — not in the workspace connector list yet. The "API key" you have is sitting outside Lovable; to make it organizational you add it through the Perplexity connector at the workspace level (one key, link to N projects).
+## Coordination rule
 
-**This project's secrets**:
-- `LOVABLE_API_KEY` (managed) — powers `ai_gateway_scout` + every other AI call. Already active.
-- `anthropic_api_key` (lowercase) — exists. **The dormant `anthropic_web_search` adapter reads `ANTHROPIC_API_KEY` (uppercase)**, so it never activates even though the key is there. Casing mismatch is the bug.
-- `INGEST_TOKEN` — external scanner bridge.
+Lovable agent owns `src/**` (frontend), `docs/**`, `mem://**`, `.lovable/**`.
+Claude Code owns `supabase/functions/**` and `supabase/migrations/**`.
+Either side touching the other's surface must announce it here first.
 
-**Currently active adapters in `signal-collect`**: `hackernews` (keyless, working — 257-356 real rows on 3PL), `ai_gateway_scout` (active but URL verification kills most candidates).
-**Currently dormant**: `reddit`, `firecrawl`, `anthropic_web_search`, `perplexity_sonar`.
+## Phase index
 
-## Answering your direct questions
+| # | Phase | Owner | Status |
+|---|---|---|---|
+| 0 | Adapter layer + workspace connectors (Firecrawl, Perplexity, Anthropic casing) | Lovable | DONE |
+| 1 | Global IA + Nav + Footer (Signal + Sketchpad surfaced) | Lovable | DONE (this turn) |
+| 2 | Active-vertical context (`useActiveVertical` hook, localStorage) | Lovable | DONE (this turn) |
+| 3 | `/signal` search + LIVE/SAMPLE badge polish | Lovable | DONE (this turn) |
+| 4 | Home scan → live Opportunity Engine handoff | Lovable | DONE (this turn, link-level; deeper rewire deferred) |
+| 5 | Copy deck refresh (AI Opportunity Engine framing) | Lovable | DONE (this turn, surgical) |
+| 6 | `/simulate` fold-in as "Idea-stage sketchpad" + cross-links | Lovable | DONE (this turn) |
+| 7 | Auto-grader + refine loop (`grade-prompt` fn + `prompt_grades` table) | Lovable + Claude | HOLD — wait for Claude Code backend close-out |
+| 8 | Design tokens audit + 375px pass + verification checklist | Lovable | TODO |
+| B1 | Backfill `opportunity_roadmaps` from 766 unprocessed `signal_raw` rows | Claude Code | IN FLIGHT (parallel) |
+| B2 | Reddit secrets (`REDDIT_CLIENT_ID/SECRET`) | Bill | TODO |
 
-1. **"Can you use the Firecrawl key I already have?"** Yes — it's the workspace `pickle` connection. I just need to **link** it to this project (one tool call). Same connection then powers VibeCo Labs and any other project you link it to, billed once at the workspace level.
-2. **"Is the Anthropic key good for web search?"** Yes — Claude's `web_search_20250305` server-side tool is real and our adapter is already coded for it. It's dormant only because of the env-var casing mismatch above. One-line fix.
-3. **"How do I do this at the org level?"** Workspace connectors are the org-level primitive. Add once in workspace settings, link to each project. Firecrawl + Perplexity both work this way. The raw `anthropic_api_key` secret is project-scoped only — if you want Anthropic org-wide, we'd need to either (a) duplicate the secret per project, or (b) wait for an Anthropic connector (none exists today).
-4. **"Coordinate with VibeCo Labs' Claude orchestration."** Confirmed VibeCo Labs is a separate project in your workspace. Workspace connections (Firecrawl, Perplexity, Reddit if/when added) will be reusable there with zero extra setup. Each project still needs its own edge function code, but the adapter pattern we already built ports cleanly. Recommend Claude's plan there mirrors the adapter interface (`{ name, isConfigured, collect }`) so both projects stay in sync.
+## Current data state (verified)
 
-## The plan (this project — additive/surgical, no UI changes)
+- `signal_raw`: 846 rows
+- `signal_themes`: 4 rows
+- `feature_candidates`: 4 rows (all `wholesale-distribution-3pl`, status=open)
+- `opportunity_roadmaps`: 0 rows (B1 will fix)
+- `signal_verticals`: 1 enabled (`wholesale-distribution-3pl`, 7d lookback)
 
-### 1. Link Firecrawl `pickle` to this project
-One call: `standard_connectors--connect` with `connector_id: firecrawl`. Injects `FIRECRAWL_API_KEY` into edge function env. The existing `firecrawl` adapter in `signal-collect/index.ts` flips from dormant → active automatically. No code change needed.
+## Active adapters (in `signal-collect`)
 
-### 2. Add Perplexity at the workspace level
-You'll be prompted to paste the Perplexity key once. Then link to this project. The dormant `perplexity_sonar` adapter activates. Same connection then available to link into VibeCo Labs.
+| Adapter | Status | Notes |
+|---|---|---|
+| hackernews | active (keyless) | ~250-350 rows/scan on 3PL |
+| ai_gateway_scout | active | URL verification kills most candidates; tune later |
+| firecrawl (pickle) | active | workspace connector |
+| perplexity_sonar | active | workspace connector |
+| anthropic_web_search | active | `claude-sonnet-4-5`, casing fixed |
+| reddit | dormant | needs B2 |
 
-### 3. Fix the Anthropic casing bug
-Rename the existing `anthropic_api_key` secret to `ANTHROPIC_API_KEY` (or update the adapter to read the lowercase name — I'll do whichever is less disruptive). Then `anthropic_web_search` adapter activates using Claude's grounded web_search tool.
+## Reuse principles (apply to every new prompt)
 
-### 4. Reddit (still pending your action)
-Per the runbook, Reddit needs `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` from a "script" app at reddit.com/prefs/apps. Not a connector — has to be a project secret. This stays in your court; nothing for me to wire until you create the Reddit app.
+1. Reuse the adapter shape (`{ name, isConfigured, collect }`), `_shared/llm-client`, `_shared/model-router`, `signal_raw` schema.
+2. Frontend: reuse `Navbar`, `Footer`, `FadeIn`, `Card`, `Badge`, shadcn primitives, the `DiscoveryAuditProvider` modal, and existing semantic tokens. Don't fork.
+3. Cross-link surfaces instead of duplicating them (`/signal` ↔ `/simulate` ↔ Home scan).
+4. Real data only — never fabricate for a configured vertical. SAMPLE badge required when illustrative.
+5. New surfaces follow `mem://patterns/prompt-component-reuse` (saved this turn).
 
-### 5. Verification run
-After steps 1–3, run `signal-collect` on the 3PL vertical, then `signal-process`. Report real row counts per active adapter and confirm no fabrication.
+## Out of scope (guardrails — do not touch without explicit ask)
 
-## Other edge AI I'd recommend (built-in, no new keys)
+- Homepage hero core narrative, discovery-audit modal, `/briefing`, `ProofShowcase`.
+- Site publish (`preview_ui--publish`).
+- `src/integrations/supabase/client.ts`, `types.ts`, `.env`.
+- VibeCo Labs project files (separate project; workspace connectors are the only shared surface).
 
-All of these use `LOVABLE_API_KEY` you already have — zero marginal config:
+## Outcomes from this turn
 
-- **Embedding-based de-dup** in `signal-process`: right now clustering is title/keyword based. Adding Gemini embeddings (`google/text-embedding-004` via the gateway) would collapse near-duplicate complaints across HN/Reddit/Firecrawl into one cluster instead of three. Big quality win for signal density.
-- **Nightly summarization digest**: a `signal-digest` edge function that runs after `signal-process` and produces a 5-bullet "what's new this week" using Gemini Flash Lite. Cheap, weekly cadence.
-- **Auto-tagging vertical relevance**: a tiny Gemini Flash Lite classifier between collect and process that drops obvious off-topic items (e.g., HN posts about "3PL printing" that aren't logistics). Saves cluster noise.
-- **Image generation for opportunity roadmaps**: when `opportunity-roadmap` drafts a build-or-sell idea, auto-generate a hero concept image with `google/gemini-3.1-flash-image`. Free with `LOVABLE_API_KEY`. Makes the board scannable.
-- **Embeddings-based "similar opportunity" links** on the roadmap UI — same embedding store, no new infra.
-
-These are individual follow-up plans, not part of this one. Flag which sound interesting and I'll plan them out separately.
-
-## Out of scope (guardrails)
-
-- No homepage / discovery-audit modal / proofs / `/briefing` changes.
-- No frontend publish.
-- No Reddit secret work — Bill's job per runbook.
-- No `INGEST_TOKEN` rotation.
-- No edits to VibeCo Labs project files from here — workspace connectors are the only shared surface. Coordination with Claude there happens by you sharing this plan.
-
-## Outcome
-
-After this plan: `hackernews`, `ai_gateway_scout`, `firecrawl`, `anthropic_web_search`, `perplexity_sonar` all active for VibeCo's `/signal` board. Same Firecrawl/Perplexity connections one click away from powering VibeCo Labs. Reddit still waiting on you.
+- Nav surfaces Signal Board + Idea Sketchpad on desktop and mobile.
+- Footer mirrors the same.
+- `useActiveVertical` hook centralizes the active vertical across pages, persisted to `localStorage`.
+- `/signal` candidates list has a search filter (theme + problem + quotes).
+- Home `OpportunityScan` results now offer a one-click handoff to `/signal` to see the live engine.
+- `/simulate` reframed as **Idea-stage sketchpad** with an eyebrow + cross-link back to `/signal`.
+- `mem://patterns/prompt-component-reuse` saved so the next prompt inherits the same conventions.

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { HelmetProvider, Helmet } from "react-helmet-async";
-import { Radar, Sparkles, ArrowUpRight, X, Quote, Loader2, TrendingUp, Radio, Plus, Clock, AlertTriangle, Map } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Radar, Sparkles, ArrowUpRight, X, Quote, Loader2, TrendingUp, Radio, Plus, Clock, AlertTriangle, Map, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
@@ -12,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useActiveVertical } from "@/hooks/useActiveVertical";
 
 /**
  * Signal Board — the human-gated surface for Signal Mine (Stage 5).
@@ -152,12 +154,13 @@ function Sparkline({ points }: { points: number[] }) {
 }
 
 const SignalBoard = () => {
+  const navigate = useNavigate();
   const [candidates, setCandidates] = useState<Candidate[]>(SAMPLE);
   const [themes, setThemes] = useState<Theme[]>(SAMPLE_THEMES);
   const [scanning, setScanning] = useState(false);
   const [counts, setCounts] = useState<{ collected: number; pain: number; clusters: number; candidates: number } | null>(null);
   const [productTags, setProductTags] = useState<string[]>([]);
-  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [activeTag, setActiveTag] = useActiveVertical();
   const [latestScanDate, setLatestScanDate] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [verticals, setVerticals] = useState<Vertical[]>([]);
@@ -170,6 +173,7 @@ const SignalBoard = () => {
   const [newKeywords, setNewKeywords] = useState("");
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [drafting, setDrafting] = useState(false);
+  const [query, setQuery] = useState("");
 
   // Owner gate: Promote/Dismiss and Run scan mutate the board, so they're
   // limited to an authenticated admin. RLS enforces this server-side too;
@@ -359,7 +363,17 @@ const SignalBoard = () => {
     }
   };
 
-  const visible = useMemo(() => candidates.filter((c) => !c.status || c.status === "open"), [candidates]);
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const open = candidates.filter((c) => !c.status || c.status === "open");
+    if (!q) return open;
+    return open.filter((c) =>
+      [c.cluster_theme, c.problem, c.proposed_solution, ...(c.representative_quotes ?? [])]
+        .join(" ")
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [candidates, query]);
 
   // Selector options = configured verticals ∪ any tag that already has data.
   const optionTags = useMemo(() => {
@@ -568,7 +582,18 @@ const SignalBoard = () => {
 
           {/* Candidates */}
           <div className="mt-8 space-y-4">
-            <h2 className="font-display text-lg font-bold">Feature candidates</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="font-display text-lg font-bold">Feature candidates</h2>
+              <div className="relative ml-auto w-full sm:w-64">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search themes, quotes…"
+                  className="h-9 pl-8 text-xs"
+                />
+              </div>
+            </div>
             {visible.map((c, idx) => {
               const realIdx = candidates.indexOf(c);
               return (
@@ -610,16 +635,33 @@ const SignalBoard = () => {
                     </div>
                   )}
 
-                  {isAdmin && (
-                    <div className="mt-4 flex gap-2">
-                      <Button size="sm" className="gap-1.5" onClick={() => setStatus(realIdx, "promoted")}>
-                        Promote to change request <ArrowUpRight className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button size="sm" variant="ghost" className="gap-1.5 text-muted-foreground" onClick={() => setStatus(realIdx, "dismissed")}>
-                        <X className="h-3.5 w-3.5" /> Dismiss
-                      </Button>
-                    </div>
-                  )}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {/* Cross-link: take this real pain into the sketchpad. Available to everyone. */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() =>
+                        navigate("/simulate", {
+                          state: {
+                            prefillIdea: `Problem: ${c.problem}\n\nProposed: ${c.proposed_solution}\n\nGrounded in real signal (${c.evidence.member_count} mentions, sources: ${c.evidence.sources.join(", ")}).`,
+                          },
+                        })
+                      }
+                    >
+                      <Sparkles className="h-3.5 w-3.5" /> Sketch this idea
+                    </Button>
+                    {isAdmin && (
+                      <>
+                        <Button size="sm" className="gap-1.5" onClick={() => setStatus(realIdx, "promoted")}>
+                          Promote to change request <ArrowUpRight className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="gap-1.5 text-muted-foreground" onClick={() => setStatus(realIdx, "dismissed")}>
+                          <X className="h-3.5 w-3.5" /> Dismiss
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </Card>
               );
             })}
