@@ -199,10 +199,11 @@ const SignalBoard = () => {
     (async () => {
       let configured: Vertical[] = [];
       try {
+        // Load ALL verticals (the `enabled` flag only controls the nightly cron,
+        // NOT board visibility — every vertical with data should be selectable).
         const { data: vData } = await (supabase as any)
           .from("signal_verticals")
           .select("product_tag, vertical, subreddits, keywords, lookback_days")
-          .eq("enabled", true)
           .order("created_at", { ascending: true });
         configured = (vData ?? []).map((v: any) => ({
           product_tag: v.product_tag, vertical: v.vertical,
