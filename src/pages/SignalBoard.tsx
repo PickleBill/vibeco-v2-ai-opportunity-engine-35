@@ -186,6 +186,7 @@ const SignalBoard = () => {
   const [verticalEvidenceCount, setVerticalEvidenceCount] = useState<number | null>(null);
   const [verticalEvidenceSamples, setVerticalEvidenceSamples] = useState<RawSignal[]>([]);
   const [expandedOpp, setExpandedOpp] = useState<number | null>(null);
+  const [showThemes, setShowThemes] = useState(false);
 
   useEffect(() => {
     (async () => {
