@@ -300,6 +300,18 @@ const SignalBoard = () => {
     } catch {}
   };
 
+  // Auto-open the top candidate's evidence so "real sources" is felt immediately.
+  useEffect(() => {
+    if (!candidates.length) return;
+    if (expandedId) return;
+    const first = candidates.find((c) => !c.status || c.status === "open");
+    if (!first) return;
+    const key = first.id ?? first.cluster_theme;
+    setExpandedId(key);
+    if (first.cluster_id) loadEvidence(first);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidates]);
+
   const toggleExpand = async (candidate: Candidate) => {
     const key = candidate.id ?? candidate.cluster_theme;
     if (expandedId === key) { setExpandedId(null); return; }
