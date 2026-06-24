@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { HelmetProvider, Helmet } from "react-helmet-async";
-import { Radar, Sparkles, ArrowUpRight, X, Quote, Loader2, TrendingUp, Radio, Plus, Clock, AlertTriangle, Map } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Radar, Sparkles, ArrowUpRight, X, Quote, Loader2, TrendingUp, Radio, Plus, Clock, AlertTriangle, Map, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
@@ -12,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useActiveVertical } from "@/hooks/useActiveVertical";
 
 /**
  * Signal Board — the human-gated surface for Signal Mine (Stage 5).
@@ -152,12 +154,13 @@ function Sparkline({ points }: { points: number[] }) {
 }
 
 const SignalBoard = () => {
+  const navigate = useNavigate();
   const [candidates, setCandidates] = useState<Candidate[]>(SAMPLE);
   const [themes, setThemes] = useState<Theme[]>(SAMPLE_THEMES);
   const [scanning, setScanning] = useState(false);
   const [counts, setCounts] = useState<{ collected: number; pain: number; clusters: number; candidates: number } | null>(null);
   const [productTags, setProductTags] = useState<string[]>([]);
-  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [activeTag, setActiveTag] = useActiveVertical();
   const [latestScanDate, setLatestScanDate] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [verticals, setVerticals] = useState<Vertical[]>([]);
@@ -170,6 +173,7 @@ const SignalBoard = () => {
   const [newKeywords, setNewKeywords] = useState("");
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [drafting, setDrafting] = useState(false);
+  const [query, setQuery] = useState("");
 
   // Owner gate: Promote/Dismiss and Run scan mutate the board, so they're
   // limited to an authenticated admin. RLS enforces this server-side too;
