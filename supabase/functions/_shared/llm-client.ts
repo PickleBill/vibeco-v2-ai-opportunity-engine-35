@@ -1,4 +1,12 @@
 import { LLMError } from "./error-handler.ts";
+import { anthropicDirectFallbackModel } from "./model-router.ts";
+import {
+  extractJson,
+  fetchWithTimeout,
+  isFallbackEligible,
+  parseToolArguments,
+  withRetry,
+} from "./resilience.ts";
 
 // ─── Types ───
 
@@ -30,7 +38,19 @@ export interface LLMCallOptions {
   maxTokens?: number;
   modalities?: string[];
   gateway?: "lovable" | "anthropic-direct";
+  /** Per-request hard timeout (ms). Default 90s. The request is aborted + retried on timeout. */
+  timeoutMs?: number;
+  /** Number of retries on transient failures (429/5xx/timeout/network). Default 2 (→ 3 attempts). */
+  maxRetries?: number;
+  /** Disable the Gateway→Anthropic-direct provider fallback for this call. Default false. */
+  disableFallback?: boolean;
 }
+
+const DEFAULT_TIMEOUT_MS = 90_000;
+const DEFAULT_MAX_RETRIES = 2;
+
+const getAnthropicKey = () =>
+  Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("anthropic_api_key") || "";
 
 export interface LLMToolCallResult {
   name: string;
@@ -64,13 +84,14 @@ async function callLovableGateway(options: LLMCallOptions): Promise<LLMResponse>
   if (options.modalities) body.modalities = options.modalities;
 
   const start = Date.now();
-  const response = await fetch(LOVABLE_GATEWAY_URL, {
+  const response = await fetchWithTimeout(LOVABLE_GATEWAY_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
+    timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
   });
 
   const latencyMs = Date.now() - start;
@@ -100,10 +121,12 @@ function parseLovableResponse(data: Record<string, unknown>, latencyMs: number):
   const toolCalls = message?.tool_calls as Record<string, unknown>[] | undefined;
   if (toolCalls?.length) {
     result.toolCalls = toolCalls.map((tc) => {
-      const fn = tc.function as { name: string; arguments: string };
+      const fn = tc.function as { name: string; arguments: unknown };
       return {
         name: fn.name,
-        arguments: JSON.parse(fn.arguments),
+        // Tolerant parse: gateways send a JSON string, but some models wrap it
+        // in prose/fences — recover the JSON instead of throwing a SyntaxError.
+        arguments: parseToolArguments(fn.arguments),
       };
     });
   }
@@ -150,7 +173,7 @@ async function callAnthropicDirect(options: LLMCallOptions): Promise<LLMResponse
   }
 
   const start = Date.now();
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "x-api-key": apiKey,
@@ -158,6 +181,7 @@ async function callAnthropicDirect(options: LLMCallOptions): Promise<LLMResponse
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
+    timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
   });
 
   const latencyMs = Date.now() - start;
@@ -195,25 +219,76 @@ function parseAnthropicResponse(data: Record<string, unknown>, latencyMs: number
 // ─── Public API ───
 
 /**
- * Call an LLM through the appropriate gateway.
- * Defaults to Lovable Gateway. Set gateway: "anthropic-direct" for direct Anthropic API.
+ * Call an LLM through the appropriate gateway, with timeout, retry-with-backoff,
+ * and provider fallback.
+ *
+ * - Defaults to the Lovable Gateway; set `gateway: "anthropic-direct"` to force Anthropic.
+ * - Transient failures (429 / 5xx / timeout / network) are retried with exponential backoff.
+ * - If the Gateway stays unhealthy (429 / 402 credits / 5xx / timeout) AND
+ *   ANTHROPIC_API_KEY is set, the call fails over to the Anthropic API directly
+ *   (model from model-router, unless the requested model is already an Anthropic one).
+ *   Set `disableFallback: true` to opt out.
  */
 export async function callLLM(options: LLMCallOptions): Promise<LLMResponse> {
+  const retries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
+
   if (options.gateway === "anthropic-direct") {
-    return callAnthropicDirect(options);
+    return withRetry(() => callAnthropicDirect(options), {
+      retries,
+      onRetry: (err, attempt) =>
+        console.warn(`[llm-client] anthropic-direct retry ${attempt + 1}:`, describeErr(err)),
+    });
   }
-  return callLovableGateway(options);
+
+  try {
+    return await withRetry(() => callLovableGateway(options), {
+      retries,
+      onRetry: (err, attempt) =>
+        console.warn(`[llm-client] gateway retry ${attempt + 1} [${options.model}]:`, describeErr(err)),
+    });
+  } catch (err) {
+    // Provider fallback: the Gateway is down/over-capacity — try Anthropic directly.
+    if (!options.disableFallback && isFallbackEligible(err) && getAnthropicKey()) {
+      const model = options.model.startsWith("anthropic/")
+        ? options.model
+        : anthropicDirectFallbackModel();
+      console.warn(
+        `[llm-client] gateway failed (${describeErr(err)}); failing over to anthropic-direct (${model}).`,
+      );
+      try {
+        return await withRetry(
+          () => callAnthropicDirect({ ...options, model, gateway: "anthropic-direct" }),
+          { retries },
+        );
+      } catch (fbErr) {
+        console.error("[llm-client] anthropic-direct fallback also failed:", describeErr(fbErr));
+        throw err; // surface the ORIGINAL gateway error (more meaningful to the caller)
+      }
+    }
+    throw err;
+  }
+}
+
+function describeErr(err: unknown): string {
+  if (err instanceof LLMError) return `LLMError ${err.status}`;
+  const e = err as { name?: string; message?: string };
+  return e?.name ? `${e.name}: ${e.message ?? ""}` : String(err);
 }
 
 /**
  * Call an LLM with a tool schema and return the parsed tool call arguments.
- * Throws if the LLM doesn't return a tool call.
+ * Falls back to extracting JSON from the message content if the model answered
+ * with content instead of a tool call. Throws if neither yields usable JSON.
  */
 export async function callLLMWithTool<T>(options: LLMCallOptions): Promise<T> {
   const response = await callLLM(options);
   const toolCall = response.toolCalls?.[0];
-  if (!toolCall) {
-    throw new Error(`No tool call in LLM response for model ${options.model}`);
+  if (toolCall) return toolCall.arguments as T;
+
+  // Some models (or the anthropic-direct fallback) answer in content — recover it.
+  if (response.content) {
+    const parsed = extractJson<T>(response.content);
+    if (parsed !== null) return parsed;
   }
-  return toolCall.arguments as T;
+  throw new Error(`No tool call in LLM response for model ${options.model}`);
 }

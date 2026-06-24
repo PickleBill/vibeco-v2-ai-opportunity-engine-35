@@ -120,6 +120,20 @@ const ROUTING_TABLE: Record<TaskType, ModelCandidate[]> = {
   ],
 };
 
+// ─── Provider fallback ───
+
+/**
+ * Model used when the Lovable Gateway is unreachable (429 / 402 credits / 5xx /
+ * timeout) and ANTHROPIC_API_KEY is set, so callers fail over to the Anthropic
+ * API directly instead of erroring. Kept here (not in edge functions) so model
+ * strings live in one place. The "anthropic/" prefix is stripped by the client.
+ */
+const ANTHROPIC_DIRECT_FALLBACK = "claude-sonnet-4-5";
+
+export function anthropicDirectFallbackModel(): string {
+  return ANTHROPIC_DIRECT_FALLBACK;
+}
+
 // ─── Legacy Compatibility ───
 
 /**
