@@ -645,8 +645,8 @@ const SignalBoard = () => {
                               </TooltipTrigger>
                               <TooltipContent className="max-w-[260px] text-xs">{motion.tip}</TooltipContent>
                             </Tooltip>
-                            <Hint text="Rough build effort: S = small, M = medium, L = large.">
-                              <Badge variant="outline">Effort {o.effort}</Badge>
+                            <Hint text="Rough build effort. Small ≈ a weekend, Medium ≈ a couple weeks, Large ≈ a month+.">
+                              <Badge variant="outline">{o.effort === "S" ? "Small lift" : o.effort === "L" ? "Large lift" : "Medium lift"}</Badge>
                             </Hint>
                           </div>
 
