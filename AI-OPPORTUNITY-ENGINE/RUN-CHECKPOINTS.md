@@ -7,6 +7,8 @@ Checkpoint line index (monotonic; highest P# with PASS wins on resume):
 
 - `[2026-06-24] P0 PASS — state sanity + ledger opened; project knowledge set`
 - `[2026-06-24] P1 PASS — cluster_id/theme_id integrity asserted 30/30; hardening tests added`
+- `[2026-06-24] P2 PASS — breadth: 3 new verticals (restaurant-ops, property-management, home-services) closed the loop; 4 roadmaps / 21 opportunities total`
+- `[2026-06-24] P3 PASS — source health: multi-source mesh live (Firecrawl/Anthropic/Perplexity/HN); 0/2744 synth rows; Reddit not-configured (zero, by design)`
 
 ---
 
@@ -31,3 +33,30 @@ Checkpoint line index (monotonic; highest P# with PASS wins on resume):
 **Risks:** Low. Tests are additive.
 **Next action:** P2 — run the full loop on vertical 1, verify a real roadmap with resolvable evidence URLs.
 **Needs Bill:** no
+
+## P2 — Breadth (the front-load)
+
+**Status:** PASS
+**What changed:** Ran the full live loop (collect → process → roadmap, persist) on 3 new verticals: `restaurant-ops`, `property-management`, `home-services`. Each closed end-to-end into a real `opportunity_roadmaps` row. Registered each in `signal_verticals` with `enabled=false` (PRODUCT DECISION — keeps them off the nightly cron so no surprise recurring spend; the board still surfaces any vertical that has candidate data).
+**What we learned:** The engine is genuinely dynamic — point it at a fresh vertical and it returns 5 finished, stress-tested opportunities with target user · pain · why-now · build · motion · effort · ROI · confidence, grounded in real evidence. Quality is high (e.g. restaurant "Payout Integrity Engine" conf 95; home-services "Instant-Pay Field Bot" conf 95). One vertical at a time kept cost bounded and let each be verified before the next.
+**Product read:** This clears the aliveness test on 4 verticals, not 1. The gallery is real and on-brand for the founder + operator ICPs (every opportunity names a specific SMB customer and a next move). `opportunity_roadmaps` 1 → 4; opportunities total = 21.
+**Evidence/tests:** Live DB: 4 product_tags, 2744 real signal_raw (0 synth), 47 candidates (0 untraceable), 4 roadmaps. Opportunity JSON spot-checked; sample source URLs are real, resolvable pages (g2.com, capterra.com, swipe.by, appfront.ai). Gallery saved to `OPPORTUNITY-GALLERY.md`.
+**Risks:** New verticals' data is visible on the public board (board reads product_tags with data) — additive + reversible by `product_tag`. Recurring nightly cost held at 1 vertical by the `enabled=false` decision.
+**Next action:** P4 — drive Lovable to render `/signal` opportunity-first across all 4 verticals (surgical, not a rebuild) + a live Home card.
+**Needs Bill:** no (but: flip `enabled=true` on any new vertical you want scanned nightly — that adds recurring cost)
+
+## P3 — Source health
+
+**Status:** PASS
+**What changed:** Confirmed the live source mesh via real runs. No changes needed — the adapters are healthier than the docs claimed.
+**What we learned:** Per-run adapter posts (restaurant-ops): firecrawl 760, anthropic_web_search 15, perplexity_sonar 10, ai_gateway_scout 7, hackernews 0–46 (phrase-keyword dependent), reddit skipped (not configured). Firecrawl/Anthropic/Perplexity keys are all LIVE now (the spec/coordination docs saying "dormant pending keys" are stale). 0 synthetic rows across all 2744 — the synth fallback correctly never fires for real verticals.
+**Product read:** Source health is honest and strong. Reddit contributes zero and nothing depends on it (by design). The "every claim links to a real source" promise holds.
+**Evidence/tests:** `signal-collect` adapter status arrays per run; DB synth count = 0.
+**Risks:** Firecrawl returns high volume per run (cost) — bounded via `scrape:false` + tight keyword sets + small `limit`.
+**Next action:** P4 gallery render; P6 product+ICP panel.
+**Needs Bill:** no
+
+## Council mini-gate (P1→P2) — codebase one-vs-two
+
+**Status:** logged, non-blocking (default held)
+**Call:** Keep building on V2.1 (`8563d10e`) as the active surface; V1 (`b653b128`) stays the `/simulate` riff source. Two-project model holds (per the existing 2026-06-24 decision). Did not spend a council pass — the default is clear and the run favors momentum. Queued for a deeper Cowork/council pass if Bill wants to revisit collapse later.
