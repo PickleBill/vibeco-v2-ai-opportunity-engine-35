@@ -186,6 +186,7 @@ const SignalBoard = () => {
   const [verticalEvidenceCount, setVerticalEvidenceCount] = useState<number | null>(null);
   const [verticalEvidenceSamples, setVerticalEvidenceSamples] = useState<RawSignal[]>([]);
   const [expandedOpp, setExpandedOpp] = useState<number | null>(null);
+  const [showThemes, setShowThemes] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -298,6 +299,18 @@ const SignalBoard = () => {
       setEvidenceCache((prev) => ({ ...prev, [candidate.cluster_id!]: (data ?? []) as RawSignal[] }));
     } catch {}
   };
+
+  // Auto-open the top candidate's evidence so "real sources" is felt immediately.
+  useEffect(() => {
+    if (!candidates.length) return;
+    if (expandedId) return;
+    const first = candidates.find((c) => !c.status || c.status === "open");
+    if (!first) return;
+    const key = first.id ?? first.cluster_theme;
+    setExpandedId(key);
+    if (first.cluster_id) loadEvidence(first);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidates]);
 
   const toggleExpand = async (candidate: Candidate) => {
     const key = candidate.id ?? candidate.cluster_theme;
@@ -436,36 +449,38 @@ const SignalBoard = () => {
           <main className="container max-w-4xl py-10">
 
             {/* ── Header: state the question, then answer it. ────────── */}
-            <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 text-primary">
                   <Radar className="h-5 w-5" />
                   <span className="text-xs font-semibold uppercase tracking-[0.2em]">Signal Mine · live</span>
                 </div>
-                <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight">
+                <h1 className="mt-2 font-display text-2xl sm:text-3xl font-extrabold tracking-tight">
                   What {verticalLabel} is complaining about right now
                 </h1>
-                <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                <p className="mt-2 max-w-xl text-sm sm:text-base text-muted-foreground leading-relaxed">
                   Real pain mined from public discussion (Reddit, Hacker News, Trustpilot, G2, Capterra, web),
                   clustered into ranked feature candidates. Every claim links to its source.
                 </p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:shrink-0">
                 {optionTags.length > 0 && (
                   <Select value={activeTag ?? undefined} onValueChange={(v) => setActiveTag(v)}>
-                    <SelectTrigger className="h-9 w-[210px]"><SelectValue placeholder="Vertical" /></SelectTrigger>
+                    <SelectTrigger className="h-10 flex-1 min-w-[180px] sm:w-[210px] sm:flex-none text-sm">
+                      <SelectValue placeholder="Vertical" />
+                    </SelectTrigger>
                     <SelectContent>
                       {optionTags.map((t) => <SelectItem key={t} value={t}>{labelFor(t)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 )}
                 {isAdmin && (
-                  <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" title="Add a vertical" onClick={() => setAddOpen(true)}>
+                  <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" title="Add a vertical" onClick={() => setAddOpen(true)}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 )}
                 {isAdmin && (
-                  <Button onClick={runScan} disabled={scanning} className="gap-2">
+                  <Button onClick={runScan} disabled={scanning} className="h-10 gap-2">
                     {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                     {scanning ? "Scanning…" : "Run scan"}
                   </Button>
@@ -474,7 +489,7 @@ const SignalBoard = () => {
             </div>
 
             {/* ── One-line status. No 4-tile placeholder grid. ──────── */}
-            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
               {isSample ? (
                 <Badge variant="outline" className="gap-1.5 border-warning/50 text-warning">
                   <span className="h-1.5 w-1.5 rounded-full bg-warning" /> Pick a vertical to load live data
@@ -540,43 +555,58 @@ const SignalBoard = () => {
 
             {/* ── Sticky filter / sort / search. Up top, not buried. ── */}
             {!isSample && !isEmpty && (
-              <div className="sticky top-16 z-10 -mx-2 mt-6 rounded-xl border border-border bg-background/85 backdrop-blur px-2 py-2">
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="sticky top-16 z-10 -mx-2 mt-6 rounded-xl border border-border bg-background/90 backdrop-blur px-2 py-2.5">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
                   <div className="relative flex-1 min-w-[180px]">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Search problems, quotes, themes…"
-                      className="h-8 pl-8 text-xs"
+                      className="h-10 pl-9 text-sm"
                     />
                   </div>
                   <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-                    <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-10 w-full sm:w-[180px] text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pain">Sort: most painful</SelectItem>
+                      <SelectItem value="pain">Sort: loudest pain</SelectItem>
                       <SelectItem value="confidence">Sort: most confident</SelectItem>
                       <SelectItem value="recent">Sort: most evidence</SelectItem>
                     </SelectContent>
                   </Select>
-                  {allSources.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1">
-                      <button
-                        onClick={() => setSourceFilter(null)}
-                        className={`text-[11px] px-2 py-1 rounded-full border transition ${!sourceFilter ? "bg-primary/15 border-primary/40 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
-                      >All sources</button>
-                      {allSources.map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => setSourceFilter(s === sourceFilter ? null : s)}
-                          className={`text-[11px] px-2 py-1 rounded-full border transition ${sourceFilter === s ? "bg-primary/15 border-primary/40 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
-                        >{niceSource(s)}</button>
-                      ))}
-                    </div>
-                  )}
                 </div>
+                {allSources.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground mr-1">Source:</span>
+                    <button
+                      onClick={() => setSourceFilter(null)}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition ${!sourceFilter ? "bg-primary/15 border-primary/40 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
+                    >All</button>
+                    {allSources.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setSourceFilter(s === sourceFilter ? null : s)}
+                        className={`text-xs px-2.5 py-1 rounded-full border transition ${sourceFilter === s ? "bg-primary/15 border-primary/40 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
+                      >{niceSource(s)}</button>
+                    ))}
+                  </div>
+                )}
+                {(query || sourceFilter) && (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>
+                      Showing <span className="text-foreground font-medium">{visible.length}</span> of {candidates.length}
+                    </span>
+                    <button
+                      onClick={() => { setQuery(""); setSourceFilter(null); }}
+                      className="text-primary hover:brightness-110 font-medium"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                )}
               </div>
             )}
+
 
             {/* themes strip moved below roadmap */}
 
@@ -615,8 +645,8 @@ const SignalBoard = () => {
                               </TooltipTrigger>
                               <TooltipContent className="max-w-[260px] text-xs">{motion.tip}</TooltipContent>
                             </Tooltip>
-                            <Hint text="Rough build effort: S = small, M = medium, L = large.">
-                              <Badge variant="outline">Effort {o.effort}</Badge>
+                            <Hint text="Rough build effort. Small ≈ a weekend, Medium ≈ a couple weeks, Large ≈ a month+.">
+                              <Badge variant="outline">{o.effort === "S" ? "Small lift" : o.effort === "L" ? "Large lift" : "Medium lift"}</Badge>
                             </Hint>
                           </div>
 
@@ -710,14 +740,20 @@ const SignalBoard = () => {
               </div>
             )}
 
-            {/* ── Trending themes strip (below the opportunities) ──── */}
+            {/* ── Trending themes strip (below the opportunities). Collapsed by default on mobile. ──── */}
             {themes.length > 0 && (
               <div className="mt-8">
                 <div className="flex items-baseline gap-2">
                   <h2 className="font-display text-lg font-bold">Themes that keep coming back</h2>
-                  <span className="text-xs text-muted-foreground">— durable across scans</span>
+                  <span className="hidden sm:inline text-xs text-muted-foreground">— durable across scans</span>
+                  <button
+                    className="md:hidden ml-auto text-xs font-semibold text-primary hover:brightness-110"
+                    onClick={() => setShowThemes((s) => !s)}
+                  >
+                    {showThemes ? "Hide" : `Show (${themes.length})`}
+                  </button>
                 </div>
-                <div className="mt-3 -mx-2 px-2 overflow-x-auto">
+                <div className={`mt-3 -mx-2 px-2 overflow-x-auto ${showThemes ? "" : "hidden md:block"}`}>
                   <div className="flex gap-3 pb-2">
                     {themes.slice(0, 8).map((t, i) => {
                       const tl = trendLabel(t.trend);
@@ -764,7 +800,7 @@ const SignalBoard = () => {
                         <Hint text="How sure the model is, given the size and consistency of the evidence.">
                           <Badge variant="secondary">{c.confidence}% sure</Badge>
                         </Hint>
-                        <Badge variant="outline">{c.evidence.member_count} signals</Badge>
+                        <Badge variant="outline">{c.evidence.member_count} real posts</Badge>
                       </div>
                     </div>
 
