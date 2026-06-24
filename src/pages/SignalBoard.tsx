@@ -635,16 +635,33 @@ const SignalBoard = () => {
                     </div>
                   )}
 
-                  {isAdmin && (
-                    <div className="mt-4 flex gap-2">
-                      <Button size="sm" className="gap-1.5" onClick={() => setStatus(realIdx, "promoted")}>
-                        Promote to change request <ArrowUpRight className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button size="sm" variant="ghost" className="gap-1.5 text-muted-foreground" onClick={() => setStatus(realIdx, "dismissed")}>
-                        <X className="h-3.5 w-3.5" /> Dismiss
-                      </Button>
-                    </div>
-                  )}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {/* Cross-link: take this real pain into the sketchpad. Available to everyone. */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() =>
+                        navigate("/simulate", {
+                          state: {
+                            prefillIdea: `Problem: ${c.problem}\n\nProposed: ${c.proposed_solution}\n\nGrounded in real signal (${c.evidence.member_count} mentions, sources: ${c.evidence.sources.join(", ")}).`,
+                          },
+                        })
+                      }
+                    >
+                      <Sparkles className="h-3.5 w-3.5" /> Sketch this idea
+                    </Button>
+                    {isAdmin && (
+                      <>
+                        <Button size="sm" className="gap-1.5" onClick={() => setStatus(realIdx, "promoted")}>
+                          Promote to change request <ArrowUpRight className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="gap-1.5 text-muted-foreground" onClick={() => setStatus(realIdx, "dismissed")}>
+                          <X className="h-3.5 w-3.5" /> Dismiss
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </Card>
               );
             })}
