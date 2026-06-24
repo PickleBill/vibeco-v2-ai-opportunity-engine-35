@@ -578,35 +578,7 @@ const SignalBoard = () => {
               </div>
             )}
 
-            {/* ── Trending themes strip ────────────────────────────── */}
-            {themes.length > 0 && (
-              <div className="mt-8">
-                <div className="flex items-baseline gap-2">
-                  <h2 className="font-display text-lg font-bold">Themes that keep coming back</h2>
-                  <span className="text-xs text-muted-foreground">— durable across scans</span>
-                </div>
-                <div className="mt-3 -mx-2 px-2 overflow-x-auto">
-                  <div className="flex gap-3 pb-2">
-                    {themes.slice(0, 8).map((t, i) => {
-                      const tl = trendLabel(t.trend);
-                      return (
-                        <Card key={(t.id ?? t.title) + i} className="shrink-0 w-[260px] flex flex-col gap-2 p-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="text-sm font-semibold leading-tight">{t.title}</span>
-                            <Sparkline points={(t.score_history ?? []).map((p) => p.s)} />
-                          </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className={`font-display text-lg font-extrabold ${painTone(t.pain_score)}`}>{Math.round(t.pain_score)}</span>
-                            <span className={`font-semibold ${tl.cls}`}>{tl.icon} {t.trend > 0 ? "+" : ""}{t.trend}</span>
-                            <span className="ml-auto text-muted-foreground">seen {t.occurrence_count}×</span>
-                          </div>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* themes strip moved below roadmap */}
 
             {/* ── Roadmap (AI build-or-sell) ────────────────────────── */}
             {!isSample && (roadmap || (isAdmin && !isEmpty)) && (
