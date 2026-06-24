@@ -263,6 +263,23 @@ const SignalBoard = () => {
           .order("generated_at", { ascending: false }).limit(1);
         const r0 = (rm ?? [])[0];
         setRoadmap(r0 ? { summary: r0.summary ?? "", market_read: r0.market_read ?? "", opportunities: r0.opportunities ?? [] } : null);
+
+        // Vertical-level evidence: live count + a few sample source rows with URLs.
+        const { count: evCount } = await (supabase as any)
+          .from("signal_raw")
+          .select("id", { count: "exact", head: true })
+          .eq("product_tag", activeTag);
+        setVerticalEvidenceCount(typeof evCount === "number" ? evCount : null);
+
+        const { data: evSamples } = await (supabase as any)
+          .from("signal_raw")
+          .select("id, title, body, source, source_url")
+          .eq("product_tag", activeTag)
+          .not("source_url", "is", null)
+          .order("collected_at", { ascending: false })
+          .limit(12);
+        setVerticalEvidenceSamples((evSamples ?? []) as RawSignal[]);
+        setExpandedOpp(null);
       } catch {}
       finally { setLoading(false); }
     })();
