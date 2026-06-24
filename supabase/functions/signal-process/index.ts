@@ -141,6 +141,16 @@ serve(async (req) => {
           scan_date: scanDate,
         });
         if (fErr) console.error("candidate insert:", fErr.message);
+
+        // 3) Stamp cluster_id back onto the source rows so the candidate →
+        // signal_raw evidence join resolves (the "every claim links to its
+        // source" promise). Without this, signal_raw.cluster_id stays NULL and
+        // the per-candidate Evidence drawer has nothing to join to.
+        if (cluster?.id && c.source_ids?.length) {
+          const { error: uErr } = await supabase
+            .from("signal_raw").update({ cluster_id: cluster.id }).in("id", c.source_ids);
+          if (uErr) console.error("cluster_id writeback:", uErr.message);
+        }
       }
       // Note: rows were already claimed (marked processed) up front — see the
       // idempotency guard above — so there is no separate mark-processed here.

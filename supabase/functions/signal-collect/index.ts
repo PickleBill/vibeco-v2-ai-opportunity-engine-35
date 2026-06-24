@@ -4,6 +4,7 @@ import { handleCors, jsonResponse } from "../_shared/cors.ts";
 import { handleFunctionError } from "../_shared/error-handler.ts";
 import { callLLMWithTool } from "../_shared/llm-client.ts";
 import { selectModel } from "../_shared/model-router.ts";
+import { dedupeByKey } from "../_shared/signal-integrity.ts";
 
 /**
  * Signal Mine — Stage 1: Collect.
@@ -713,13 +714,9 @@ serve(async (req) => {
       }
     }
 
-    // De-dupe within this run.
-    const seen = new Set<string>();
-    items = items.filter((it) => {
-      const key = it.source_url || it.body.slice(0, 80);
-      if (seen.has(key)) return false;
-      seen.add(key); return true;
-    });
+    // De-dupe within this run (shared, tested invariant — mirrors the DB-side
+    // upsert(onConflict:"source_url") so a mid-run kill + restart never double-writes).
+    items = dedupeByKey(items);
 
     let persisted = 0;
     if (body.persist && items.length > 0) {

@@ -44,6 +44,10 @@ export interface FeatureCandidate {
   confidence: number;       // 0..100
   effort: "S" | "M" | "L";
   evidence: { member_count: number; sources: string[] };
+  // signal_raw row IDs of this cluster's members — lets the caller write
+  // signal_raw.cluster_id back so the candidate → source-row evidence join
+  // resolves. Empty when items were passed inline without DB ids.
+  source_ids: string[];
 }
 
 export interface SignalMineInput {
@@ -282,7 +286,7 @@ export async function synthesizeCandidate(cluster: Cluster, painItems: Classifie
   const system = `You are a product strategist for "${product}". ${productContext}
 Read a cluster of real user complaints and produce ONE crisp, buildable feature candidate. Favor the smallest change that kills the pain. Paraphrase quotes — never reproduce them verbatim.`;
 
-  const result = await callLLMWithTool<Omit<FeatureCandidate, "cluster_theme" | "pain_score" | "evidence">>({
+  const result = await callLLMWithTool<Omit<FeatureCandidate, "cluster_theme" | "pain_score" | "evidence" | "source_ids">>({
     model,
     messages: [
       { role: "system", content: system },
@@ -298,6 +302,7 @@ Read a cluster of real user complaints and produce ONE crisp, buildable feature 
     pain_score: cluster.pain_score,
     evidence: { member_count: members.length, sources },
     ...result,
+    source_ids: members.map((m) => m.id).filter((id): id is string => !!id),
   };
 }
 
