@@ -449,36 +449,38 @@ const SignalBoard = () => {
           <main className="container max-w-4xl py-10">
 
             {/* ── Header: state the question, then answer it. ────────── */}
-            <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 text-primary">
                   <Radar className="h-5 w-5" />
                   <span className="text-xs font-semibold uppercase tracking-[0.2em]">Signal Mine · live</span>
                 </div>
-                <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight">
+                <h1 className="mt-2 font-display text-2xl sm:text-3xl font-extrabold tracking-tight">
                   What {verticalLabel} is complaining about right now
                 </h1>
-                <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                <p className="mt-2 max-w-xl text-sm sm:text-base text-muted-foreground leading-relaxed">
                   Real pain mined from public discussion (Reddit, Hacker News, Trustpilot, G2, Capterra, web),
                   clustered into ranked feature candidates. Every claim links to its source.
                 </p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:shrink-0">
                 {optionTags.length > 0 && (
                   <Select value={activeTag ?? undefined} onValueChange={(v) => setActiveTag(v)}>
-                    <SelectTrigger className="h-9 w-[210px]"><SelectValue placeholder="Vertical" /></SelectTrigger>
+                    <SelectTrigger className="h-10 flex-1 min-w-[180px] sm:w-[210px] sm:flex-none text-sm">
+                      <SelectValue placeholder="Vertical" />
+                    </SelectTrigger>
                     <SelectContent>
                       {optionTags.map((t) => <SelectItem key={t} value={t}>{labelFor(t)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 )}
                 {isAdmin && (
-                  <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" title="Add a vertical" onClick={() => setAddOpen(true)}>
+                  <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" title="Add a vertical" onClick={() => setAddOpen(true)}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 )}
                 {isAdmin && (
-                  <Button onClick={runScan} disabled={scanning} className="gap-2">
+                  <Button onClick={runScan} disabled={scanning} className="h-10 gap-2">
                     {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                     {scanning ? "Scanning…" : "Run scan"}
                   </Button>
@@ -487,7 +489,7 @@ const SignalBoard = () => {
             </div>
 
             {/* ── One-line status. No 4-tile placeholder grid. ──────── */}
-            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
               {isSample ? (
                 <Badge variant="outline" className="gap-1.5 border-warning/50 text-warning">
                   <span className="h-1.5 w-1.5 rounded-full bg-warning" /> Pick a vertical to load live data
