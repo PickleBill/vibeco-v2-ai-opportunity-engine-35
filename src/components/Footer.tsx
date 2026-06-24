@@ -36,13 +36,14 @@ const Footer = () => {
           <div className="flex items-center gap-6">
             {[
               { label: "How it works", href: "#model" },
+              { label: "Signal", href: "/signal", route: true as const },
+              { label: "Sketchpad", href: "/simulate", route: true as const },
               { label: "Proofs", href: "#proofs" },
-              { label: "Scan", href: "#scan" },
               { label: "Contact", href: "#contact" },
-            ].map((link) => (
+            ].map((link: any) => (
               <button
                 key={link.href}
-                onClick={() => handleNavClick(link.href)}
+                onClick={() => (link.route ? navigate(link.href) : handleNavClick(link.href))}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 {link.label}
