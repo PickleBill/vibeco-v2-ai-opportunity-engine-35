@@ -60,3 +60,25 @@ Checkpoint line index (monotonic; highest P# with PASS wins on resume):
 
 **Status:** logged, non-blocking (default held)
 **Call:** Keep building on V2.1 (`8563d10e`) as the active surface; V1 (`b653b128`) stays the `/simulate` riff source. Two-project model holds (per the existing 2026-06-24 decision). Did not spend a council pass — the default is clear and the run favors momentum. Queued for a deeper Cowork/council pass if Bill wants to revisit collapse later.
+
+## P4 — Gallery render (Lovable, via MCP — parallel)
+
+**Status:** PASS (preview)
+**What changed:** Drove the Lovable agent (MCP) to make `/signal` opportunity-first and surface all 4 verticals. Changes (commit 173275a3, preview-only): removed the `enabled=true` filter so every vertical with data is selectable with its real label; moved the roadmap opportunity cards to the TOP (above themes/candidates); rebuilt each opportunity card with a plain-English motion chip (Build a tool / Pre-sell a service / Partner), effort badge, **"Backed by N public complaints" live count as the hero stat (not confidence)**, an expandable **Evidence drawer with real `source_url` links**, and a "Sketch this idea" button → `/simulate` (existing `prefillIdea` path). Added an additive `HomeOpportunityCard` (highest-confidence opportunity; renders nothing if no data). Typecheck clean.
+**What we learned:** The board was already roadmap-aware — this was surgical, not a rebuild (~4.7 credits). The P6 Product Leader's #1 fix ("put the evidence ON the card, lead with evidence count not confidence") was incorporated directly into the brief and shipped.
+**Product read:** `/signal` now clears the aliveness test shape: finished opportunity → why it pays → real receipts one click away → "Sketch this idea." This is the gallery.
+**Evidence/tests:** Lovable build status completed/ready, agentFinished; preview at id-preview--8563d10e…lovable.app; commit 173275a3. Home screenshot confirms hero untouched by this pass.
+**Risks:** Lovable committed to its own connected branch (not my feature branch) — no collision with the backend PR. Preview-only; public site unchanged.
+**Next action:** P5 hero CTA realignment; P6 panel synthesis.
+**Needs Bill:** no (review the preview; publish holds for your tap)
+
+## P5 — Copy / positioning (hero CTA realignment)
+
+**Status:** PASS (preview)
+**What changed:** LIVE-STATE FINDING — the spec marked the home de-collision "DONE," but the live hero still led with the old "AI that reads your email and phone" headline + a PRIMARY "Book a discovery audit" CTA (contradicting the locked decision that Signal is the front door and the audit lives at /briefing). Made a surgical, preview-only fix (commit 04b13b98, 1 credit): "Run an opportunity scan" is now the primary CTA; "Book a discovery audit" demoted to a quiet secondary link. Headline left unchanged. The P4 build already used plain-English labels, and the QA fake-stat audit is clean — so no further jargon pass was needed.
+**What we learned:** The spec's "DONE" claims for W1/W2 de-collision + hero replacement are STALE vs. the live site. Trust live state over docs (the run's own rule). The old hero headline is still live.
+**Product read:** Home now leads with the engine, not the agency pitch — aligned with the thesis. The headline ("AI that reads your email and phone") is the remaining positioning mismatch; left for Bill (higher-stakes creative call).
+**Evidence/tests:** Lovable diff applied to `src/components/Hero.tsx`; preview-only confirmed.
+**Risks:** Low (preview-only, reversible, implements a locked decision).
+**Next action:** P6 panel synthesis → fix list; assemble morning package.
+**Needs Bill:** yes — the hero HEADLINE rewrite ("AI that reads your email and phone. It handles the rest." → engine-first positioning) is your creative call before publish.
