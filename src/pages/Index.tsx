@@ -5,6 +5,7 @@ import StatsBar from "../components/StatsBar";
 import Model from "../components/Model";
 import OpportunityScan from "../components/OpportunityScan";
 import ProofShowcase from "../components/ProofShowcase";
+import HomeOpportunityCard from "../components/HomeOpportunityCard";
 import SocialProof from "../components/SocialProof";
 import ContactForm from "../components/ContactForm";
 import FinalCta from "../components/FinalCta";
