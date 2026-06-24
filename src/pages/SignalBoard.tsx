@@ -800,7 +800,7 @@ const SignalBoard = () => {
                         <Hint text="How sure the model is, given the size and consistency of the evidence.">
                           <Badge variant="secondary">{c.confidence}% sure</Badge>
                         </Hint>
-                        <Badge variant="outline">{c.evidence.member_count} signals</Badge>
+                        <Badge variant="outline">{c.evidence.member_count} real posts</Badge>
                       </div>
                     </div>
 
