@@ -35,17 +35,23 @@ echo "BEFORE  unprocessed=$(cnt signal_raw "product_tag=eq.$TAG&processed=eq.fal
 consec_fail=0
 for batch in $(seq 1 20); do
   ok=0
-  for mode in deep deep fast; do
+  # fast-first: gemini-3-flash-preview has been the reliable synthesizer; deep
+  # (gemini-2.5-pro) is a fallback. A batch that consumes rows but yields ZERO
+  # candidates (silent synthesis failure) is treated as a soft failure and the
+  # next mode is tried before giving up.
+  for mode in fast deep fast; do
     RESP=$(curl -s --max-time 280 -X POST -H "apikey: $KEY" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
       "$URL/functions/v1/signal-process" \
       -d "{\"product\":\"$TAG\",\"product_context\":\"$VERTICAL\",\"persist\":true,\"limit\":$BATCH,\"mode\":\"$mode\"}")
     COLLECTED=$(echo "$RESP" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['counts']['collected'] if d.get('counts') else 'ERR')" 2>/dev/null || echo PARSE)
-    if [ "$COLLECTED" != ERR ] && [ "$COLLECTED" != PARSE ]; then
-      CANDS=$(echo "$RESP" | python3 -c "import sys,json;print(json.load(sys.stdin)['counts']['candidates'])" 2>/dev/null)
-      echo "batch $batch [$mode]: collected=$COLLECTED new_candidates=$CANDS"
-      ok=1; break
+    if [ "$COLLECTED" = ERR ] || [ "$COLLECTED" = PARSE ]; then
+      echo "batch $batch [$mode]: FAIL $(echo "$RESP" | head -c 90)"; continue
     fi
-    echo "batch $batch [$mode]: FAIL $(echo "$RESP" | head -c 90)"
+    CANDS=$(echo "$RESP" | python3 -c "import sys,json;print(json.load(sys.stdin)['counts']['candidates'])" 2>/dev/null)
+    echo "batch $batch [$mode]: collected=$COLLECTED new_candidates=$CANDS"
+    if [ "$COLLECTED" = 0 ] || [ "${CANDS:-0}" -gt 0 ] 2>/dev/null; then ok=1; break; fi
+    # collected>0 but 0 candidates → rows already consumed by the deployed fn;
+    # try the next mode for the *next* batch's sake (can't un-consume these).
   done
   [ "$ok" = 0 ] && { consec_fail=$((consec_fail+1)); [ "$consec_fail" -ge 2 ] && { echo "ABORT: gateway degraded/credit-capped"; break; }; continue; }
   consec_fail=0
