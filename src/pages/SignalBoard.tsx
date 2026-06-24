@@ -631,24 +631,34 @@ const SignalBoard = () => {
                     </Card>
                     {roadmap.opportunities.map((o) => {
                       const motion = motionFor(o.motion);
+                      const oppExpanded = expandedOpp === o.rank;
                       return (
-                        <Card key={o.rank} className="p-4">
+                        <Card key={o.rank} className="p-5">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-display text-sm font-extrabold text-primary">#{o.rank}</span>
-                            <h3 className="font-display text-base font-bold">{o.title}</h3>
-                            <div className="ml-auto flex items-center gap-1.5">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Badge variant="default" className="cursor-help">{motion.label}</Badge>
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-[260px] text-xs">{motion.tip}</TooltipContent>
-                              </Tooltip>
-                              <Badge variant="outline">
-                                <Hint text="How strongly the evidence supports this. 0–100%.">{o.confidence}% sure</Hint>
-                              </Badge>
-                            </div>
+                            <h3 className="font-display text-lg font-bold flex-1 min-w-0">{o.title}</h3>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="default" className="cursor-help">{motion.label}</Badge>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-[260px] text-xs">{motion.tip}</TooltipContent>
+                            </Tooltip>
+                            <Hint text="Rough build effort: S = small, M = medium, L = large.">
+                              <Badge variant="outline">Effort {o.effort}</Badge>
+                            </Hint>
                           </div>
-                          <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+
+                          {verticalEvidenceCount !== null && verticalEvidenceCount > 0 && (
+                            <p className="mt-2 text-xs text-emerald-300/90">
+                              Backed by <span className="font-semibold">{verticalEvidenceCount.toLocaleString()}</span> public complaints in {labelFor(activeTag)}
+                            </p>
+                          )}
+
+                          <div className="mt-3 space-y-2 text-sm">
+                            <div>
+                              <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">The problem</div>
+                              <p className="mt-0.5">{o.problem}</p>
+                            </div>
                             <div>
                               <div className="text-[11px] font-semibold uppercase tracking-widest text-primary">What we'd build</div>
                               <p className="mt-0.5">{o.build}</p>
@@ -658,9 +668,10 @@ const SignalBoard = () => {
                               <p className="mt-0.5">{o.customer}</p>
                             </div>
                           </div>
+
                           {o.roi && (
                             <p className="mt-3 text-xs text-muted-foreground">
-                              <span className="font-semibold text-foreground">Why we believe it:</span> {o.roi}
+                              <span className="font-semibold text-foreground">Why it pays:</span> {o.roi}
                             </p>
                           )}
                           {o.based_on?.length > 0 && (
@@ -668,6 +679,53 @@ const SignalBoard = () => {
                               grounded in: {o.based_on.join(" · ")}
                             </p>
                           )}
+
+                          {verticalEvidenceSamples.length > 0 && (
+                            <div className="mt-3">
+                              <button
+                                onClick={() => setExpandedOpp(oppExpanded ? null : o.rank)}
+                                className="text-xs font-semibold text-primary inline-flex items-center gap-1.5 hover:brightness-110"
+                              >
+                                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${oppExpanded ? "rotate-180" : ""}`} />
+                                {oppExpanded ? "Hide evidence" : `Show evidence (${Math.min(verticalEvidenceSamples.length, 3)} of ${verticalEvidenceCount ?? verticalEvidenceSamples.length} real posts)`}
+                              </button>
+                              {oppExpanded && (
+                                <div className="mt-2 space-y-1.5 rounded-lg border border-border bg-background/50 p-3">
+                                  {verticalEvidenceSamples.slice(0, 3).map((r) => (
+                                    <a
+                                      key={r.id}
+                                      href={r.source_url ?? "#"}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="group flex items-start gap-2 text-xs hover:bg-muted/40 rounded p-1.5 transition"
+                                    >
+                                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 shrink-0">{niceSource(r.source)}</Badge>
+                                      <span className="flex-1 text-foreground/80 group-hover:text-foreground line-clamp-2">
+                                        {r.title || r.body?.slice(0, 140) || "(untitled)"}
+                                      </span>
+                                      <ExternalLink className="h-3 w-3 text-muted-foreground group-hover:text-primary shrink-0 mt-0.5" />
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              className="gap-1.5"
+                              onClick={() =>
+                                navigate("/simulate", {
+                                  state: {
+                                    prefillIdea: `${o.title}\n\nProblem: ${o.problem}\n\nWhat to build: ${o.build}\n\nFor: ${o.customer}\n\n(Grounded in live ${labelFor(activeTag)} signal — ${verticalEvidenceCount ?? "many"} real public complaints.)`,
+                                  },
+                                })
+                              }
+                            >
+                              <Sparkles className="h-3.5 w-3.5" /> Sketch this idea
+                            </Button>
+                          </div>
                         </Card>
                       );
                     })}
