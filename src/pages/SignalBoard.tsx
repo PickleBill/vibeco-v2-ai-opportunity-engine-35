@@ -363,7 +363,17 @@ const SignalBoard = () => {
     }
   };
 
-  const visible = useMemo(() => candidates.filter((c) => !c.status || c.status === "open"), [candidates]);
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const open = candidates.filter((c) => !c.status || c.status === "open");
+    if (!q) return open;
+    return open.filter((c) =>
+      [c.cluster_theme, c.problem, c.proposed_solution, ...(c.representative_quotes ?? [])]
+        .join(" ")
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [candidates, query]);
 
   // Selector options = configured verticals ∪ any tag that already has data.
   const optionTags = useMemo(() => {
@@ -572,7 +582,18 @@ const SignalBoard = () => {
 
           {/* Candidates */}
           <div className="mt-8 space-y-4">
-            <h2 className="font-display text-lg font-bold">Feature candidates</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="font-display text-lg font-bold">Feature candidates</h2>
+              <div className="relative ml-auto w-full sm:w-64">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search themes, quotes…"
+                  className="h-9 pl-8 text-xs"
+                />
+              </div>
+            </div>
             {visible.map((c, idx) => {
               const realIdx = candidates.indexOf(c);
               return (
