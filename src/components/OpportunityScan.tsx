@@ -108,31 +108,21 @@ const OpportunityScan = () => {
                   </div>
                 ))}
               </div>
+              {/* This is a teaser. The real engine is the live Signal Board. */}
               <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-4 rounded-xl border border-violet/30 bg-violet/[0.06] p-5">
-                <p className="text-sm text-foreground/80 leading-relaxed flex-1">
-                  This is a quick read. A discovery audit turns it into a concrete plan — scoped to your real workflow.
-                </p>
-                <button
-                  onClick={openDiscovery}
-                  className="font-display text-sm font-semibold bg-violet text-violet-foreground px-6 py-3 rounded-full hover:brightness-110 transition-all inline-flex items-center gap-2 whitespace-nowrap shadow-violet"
-                >
-                  Book a discovery audit
-                  <ArrowRight size={15} />
-                </button>
-              </div>
-
-              {/* Handoff into the live Opportunity Engine — same engine, real signal. */}
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface/60 p-4">
-                <p className="text-xs text-muted-foreground leading-relaxed flex-1 min-w-[12rem]">
-                  Want to see the live Opportunity Engine reading real pain across a vertical right now?
-                </p>
+                <div className="flex-1">
+                  <p className="font-display text-sm font-bold text-foreground">This was a keyword read on your text.</p>
+                  <p className="text-sm text-foreground/70 leading-relaxed mt-1">
+                    The live Signal Board mines real public pain — Reddit, Hacker News, Trustpilot, G2, Capterra — and ranks it into evidence-backed feature candidates. Same engine, real signal.
+                  </p>
+                </div>
                 <button
                   onClick={() => navigate("/signal")}
-                  className="text-xs font-semibold text-primary hover:brightness-110 inline-flex items-center gap-1.5"
+                  className="font-display text-sm font-semibold bg-violet text-violet-foreground px-6 py-3 rounded-full hover:brightness-110 transition-all inline-flex items-center gap-2 whitespace-nowrap shadow-violet"
                 >
-                  <Radar size={13} />
-                  Open the Signal Board
-                  <ArrowRight size={12} />
+                  <Radar size={15} />
+                  Open live Signal Board
+                  <ArrowRight size={15} />
                 </button>
               </div>
             </motion.div>

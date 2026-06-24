@@ -128,12 +128,13 @@ const Navbar = () => {
             </a>
           )}
 
-          {/* Primary CTA */}
+          {/* Primary CTA — Signal is the product. Audit CTA lives in /briefing now. */}
           <button
-            onClick={openDiscovery}
+            onClick={() => navigate("/signal")}
             className="font-display text-sm font-semibold px-5 py-2.5 rounded-full bg-violet text-violet-foreground hover:brightness-110 transition-all duration-300 flex items-center gap-2"
           >
-            Book a discovery audit
+            <Radar size={14} />
+            Open Signal
             <ArrowRight size={14} />
           </button>
         </div>
@@ -206,10 +207,11 @@ const Navbar = () => {
               </a>
             )}
             <button
-              onClick={() => { setMobileOpen(false); openDiscovery(); }}
+              onClick={() => { setMobileOpen(false); navigate("/signal"); }}
               className="flex items-center justify-center gap-2 mt-3 font-display font-semibold text-sm bg-violet text-violet-foreground px-4 py-2.5 rounded-full text-center w-full"
             >
-              Book a discovery audit
+              <Radar size={14} />
+              Open Signal
               <ArrowRight size={14} />
             </button>
           </motion.div>
