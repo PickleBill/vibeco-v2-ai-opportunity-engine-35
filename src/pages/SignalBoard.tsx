@@ -740,14 +740,20 @@ const SignalBoard = () => {
               </div>
             )}
 
-            {/* ── Trending themes strip (below the opportunities) ──── */}
+            {/* ── Trending themes strip (below the opportunities). Collapsed by default on mobile. ──── */}
             {themes.length > 0 && (
               <div className="mt-8">
                 <div className="flex items-baseline gap-2">
                   <h2 className="font-display text-lg font-bold">Themes that keep coming back</h2>
-                  <span className="text-xs text-muted-foreground">— durable across scans</span>
+                  <span className="hidden sm:inline text-xs text-muted-foreground">— durable across scans</span>
+                  <button
+                    className="md:hidden ml-auto text-xs font-semibold text-primary hover:brightness-110"
+                    onClick={() => setShowThemes((s) => !s)}
+                  >
+                    {showThemes ? "Hide" : `Show (${themes.length})`}
+                  </button>
                 </div>
-                <div className="mt-3 -mx-2 px-2 overflow-x-auto">
+                <div className={`mt-3 -mx-2 px-2 overflow-x-auto ${showThemes ? "" : "hidden md:block"}`}>
                   <div className="flex gap-3 pb-2">
                     {themes.slice(0, 8).map((t, i) => {
                       const tl = trendLabel(t.trend);
