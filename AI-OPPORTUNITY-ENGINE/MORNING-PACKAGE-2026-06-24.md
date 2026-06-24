@@ -33,14 +33,23 @@ Fix list, ordered by how many lenses flagged it:
 4. **Lead with the dollar; add a willingness-to-pay/pricing read** (2 lenses). The killers are the money-recovery framings (Payout Integrity, Instant-Pay, SafePay). Operator even named price models ("20-25% of recovered money", "$99-149/store/mo"). The engine mines pain but not WTP.
 5. **Watch homogenization** (1 lens): several opportunities collapse to the same "offline/fail-safe caching layer" primitive — loud in forums, thin as businesses.
 
-### 3a. Technical Skeptic verdict (evidence-verification pass)
-_[PENDING — the skeptic is fetching live source URLs to confirm they resolve; will be filled in on completion. Until it returns, this lane is DEFERRED and the publish gate fails-closed regardless of the other greens.]_
+### 3a. Technical Skeptic verdict (evidence-verification pass) — **the most valuable lens**
+**Verdict: Qualified YES · 6.5/10 evidence integrity.** "Act on ≥1 opportunity as a lead, not as proof. Treat outputs as well-sourced hypotheses to validate, never as a closed evidentiary chain." It did 19 live checks (HN Firebase API, HTTP fetches, DB audits):
+
+**Verified real:** HN `source_url`s match DB titles exactly (checked IDs against the official Firebase API); Reddit/blog URLs return 200; **0 synthetic rows in 2806**; no fabricated/404 URLs found. Candidate→cluster→theme traceability: **clean, zero nulls** (all 47 candidates carry cluster_id + theme_id).
+
+**The real gap it caught (others missed):** **`signal_raw.cluster_id` is NULL on all 2,806 rows** → the candidate→source-row join is severed. The per-candidate Evidence drawer (cluster_id join) therefore resolves to nothing; `member_count` is unauditable; and `representative_quotes` are LLM reconstructions, not verbatim rows. Also: **~11% of "web" evidence is `perplexity_sonar` AI summaries** (not first-person complaints) — the Instant-Pay candidate's only web evidence is one such summary — and the **3PL corpus has off-topic keyword leakage** ("temporal logic," "high heels," etc.).
+
+**→ FIXED IN THIS RUN (forward-looking):** root cause was that `signal-process` collected raw first, clustered later, and never wrote `cluster_id` back (whereas `ingest-signal` already did). I surfaced per-candidate `source_ids` in the signal-mine agent and made `signal-process` stamp `signal_raw.cluster_id` after each cluster insert. **Caveat:** this only helps FUTURE scans (the existing 2,806 rows' member→row mapping was never persisted, so it's unrecoverable), and it needs a **deploy** to take effect. Until then the live per-candidate drawer stays empty — but the P4 gallery deliberately uses **vertical-level** evidence (real source links by product_tag), which works live today.
+
+**Gate status:** with all four lenses returning "would act on ≥1 opportunity," the skeptic+product gate is a **qualified PASS** — strong enough to surface as leads, with the evidence-chain caveat logged and the structural fix staged.
 
 ## 4. Publish-readiness call
 **Status: PUBLISH-READY → preview, holding for your tap.** All automated gates that can pass autonomously are green; the build is deployed to the Lovable **preview** (`id-preview--8563d10e…lovable.app` / editor `lovable.dev/projects/8563d10e…`). Per your operating contract, **the public flip is yours** — nothing was published.
 
-Two things genuinely want your eyes before you flip public:
+Three things genuinely want your eyes before you flip public:
 - **The hero HEADLINE.** I realigned the hero *CTA* (opportunity scan is now primary; discovery audit demoted) — but the headline is still the old _"AI that reads your email and phone. It handles the rest."_ that the spec said was removed. Rewriting public hero copy is your creative call.
+- **Deploy the `signal_raw.cluster_id` writeback fix** (this PR) so the per-candidate Evidence drawer works on future scans — restores the "every claim → its source" promise end-to-end. The gallery's vertical-level evidence already works live; this fixes the tighter per-candidate join.
 - **`why_now` / `riskiest_assumption` per opportunity** (panel fix #3) needs a function change + deploy (a deploy = your gate). Worth doing before a public push — it's the half of the aliveness test still missing.
 
 Optional, your call: flip `enabled=true` on any of the 3 new verticals to add them to the nightly cron (adds recurring scan cost; I kept them off it).
@@ -57,6 +66,7 @@ Phases P0→P7 all checkpointed PASS in [`RUN-CHECKPOINTS.md`](./RUN-CHECKPOINTS
 - **The gallery render.** `/signal` was already roadmap-aware, so opportunity-first + evidence-on-card was a *surgical* ~5-credit change, not a rebuild.
 
 ### What got stuck / didn't happen
+- **The per-candidate evidence chain was broken** (`signal_raw.cluster_id` NULL on all rows) — caught by the skeptic, **root-caused and fixed in this PR**, but the fix only helps future scans and needs a deploy to activate. The existing rows can't be retroactively linked (the mapping was never stored). Worked around live via vertical-level evidence.
 - **`why_now` / `riskiest_assumption` per opportunity** — the panel wants them and the aliveness test needs them, but they're not in the roadmap schema, and the live function can't emit new fields without a deploy (gated). Logged as the top backend follow-up.
 - **Reddit** — still not configured; contributed zero (by design). Real Reddit *pages* still show up via Firecrawl web search, so evidence didn't suffer.
 - **The hero headline** — left for Bill (high-stakes creative).

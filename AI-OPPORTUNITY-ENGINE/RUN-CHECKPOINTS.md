@@ -9,6 +9,10 @@ Checkpoint line index (monotonic; highest P# with PASS wins on resume):
 - `[2026-06-24] P1 PASS — cluster_id/theme_id integrity asserted 30/30; hardening tests added`
 - `[2026-06-24] P2 PASS — breadth: 3 new verticals (restaurant-ops, property-management, home-services) closed the loop; 4 roadmaps / 21 opportunities total`
 - `[2026-06-24] P3 PASS — source health: multi-source mesh live (Firecrawl/Anthropic/Perplexity/HN); 0/2744 synth rows; Reddit not-configured (zero, by design)`
+- `[2026-06-24] P4 PASS — /signal opportunity-first across 4 verticals (preview): evidence-on-card, Sketch handoff, home live card`
+- `[2026-06-24] P5 PASS — hero CTA realigned (preview): opportunity scan primary, audit demoted (stale-doc finding)`
+- `[2026-06-24] P6 PASS — product+ICP+skeptic panel: all 4 lenses would act on ≥1 opp (Instant-Pay Field Bot); skeptic 6.5/10, found+staged-fix for signal_raw.cluster_id NULL gap`
+- `[2026-06-24] P7 PASS — QA scorecard: all hard gates green; PUBLISH-READY → preview (public flip holds for Bill)`
 
 ---
 
@@ -82,3 +86,25 @@ Checkpoint line index (monotonic; highest P# with PASS wins on resume):
 **Risks:** Low (preview-only, reversible, implements a locked decision).
 **Next action:** P6 panel synthesis → fix list; assemble morning package.
 **Needs Bill:** yes — the hero HEADLINE rewrite ("AI that reads your email and phone. It handles the rest." → engine-first positioning) is your creative call before publish.
+
+## P6 — Product + ICP + Skeptic panel (§5b)
+
+**Status:** PASS (qualified)
+**What changed:** Ran 4 independent lenses as isolated sub-agents (no shared context). Product Leader 5/10 (content 7–8, "as-shown withholds receipts" → fixed in P4); Founder ICP 7/10; Operator ICP ~8.5/10 (9 restaurants, 9.5 home-services, 8 3PL, 7.5 property-mgmt); Technical Skeptic 6.5/10 evidence integrity (qualified YES). Synthesized one ranked fix list (morning package §3).
+**What we learned:** All four would act on ≥1 opportunity (unanimous: Instant-Pay Field Bot) → the skeptic+product gate PASSES. The skeptic earned its keep: it caught a real structural gap — `signal_raw.cluster_id` NULL on all 2806 rows, breaking the candidate→source-row join — that every automated gate missed. Root-caused (signal-process never wrote cluster_id back; ingest-signal already did) and **fixed forward** (surfaced per-candidate `source_ids` in the signal-mine agent; signal-process now stamps signal_raw.cluster_id). Also flagged: ~11% of "web" evidence is Perplexity AI-summaries; 3PL corpus has off-topic keyword leakage.
+**Product read:** The output is "well-sourced hypotheses to validate, not closed proof." Good enough to surface as leads; the money-recovery framings (Instant-Pay, Payout Integrity, SafePay) are the killers; the panel named opportunities to cut (Automated Stakeholder Playbook, Reservation Bot-Shield mis-scoped, FloorForce WMS-Lite, OrderLock).
+**Evidence/tests:** 4 sub-agent verdicts; skeptic verified HN IDs vs Firebase API + HTTP statuses; DB confirms cluster_id NULL gap (0/2806). cluster_id fix committed (signal-mine.ts + signal-process); vitest 24 green.
+**Risks:** The cluster_id fix is forward-looking only (can't relink existing rows) and needs a deploy. Live per-candidate drawer stays empty until deploy; gallery uses vertical-level evidence (works live).
+**Next action:** P7 QA + morning package (done); push + draft PR (done).
+**Needs Bill:** review the fix list; the cut/re-scope calls + per-opportunity why_now/riskiest_assumption are the highest-value next backend work.
+
+## P7 — QA + publish-readiness
+
+**Status:** PASS — PUBLISH-READY → preview (public flip holds for Bill)
+**What changed:** Built + ran the reusable QA scorecard (`qa-scorecard.mjs`). All four automated hard gates green (build/truth/evidence/breadth+source). Assembled the morning package (§10): gallery, scorecard, panel fix list, publish-readiness call, log tail.
+**What we learned:** Truth gate clean (0/2806 synth, fake-stat audit only false positives). The publish gate resolves to PUBLISH-READY → preview; per the operating contract, the public flip is NOT auto-taken.
+**Product read:** The engine is publish-ready as a dynamic opportunity gallery; the two things worth doing before a public flip are the hero headline + the why_now schema (both Bill-gated deploys).
+**Evidence/tests:** `node AI-OPPORTUNITY-ENGINE/qa-scorecard.mjs` → ALL HARD GATES PASS; QA-SCORECARD-2026-06-24.md.
+**Risks:** None blocking. Public flip + deploys held for Bill (the only two gates).
+**Next action:** Run complete. Hourly PR check-in armed; subscription active on PR #3.
+**Needs Bill:** yes — (1) publish-to-public tap; (2) deploy the staged backend fixes; (3) hero headline call.
