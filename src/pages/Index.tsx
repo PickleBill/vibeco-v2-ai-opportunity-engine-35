@@ -100,6 +100,7 @@ const Index = () => {
             <StatsBar />
             <Model />
             <OpportunityScan />
+            <HomeOpportunityCard />
             <ProofShowcase />
             <SocialProof />
             <ContactForm />
