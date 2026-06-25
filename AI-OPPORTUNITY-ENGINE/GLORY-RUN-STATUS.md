@@ -16,10 +16,12 @@ The scanner was already live + working from the overnight run; this session **ve
 - ✅ **Ran a real scan today** on a fresh `dental-practices` vertical → 429 real signals, 5 grounded opportunities, every claim clickable.
 - ✅ **Exa connector coded + tested + PR'd** (`why_now` upgrade rides along).
 - ✅ **dental-practices registered on the board** — the one vertical where the per-candidate evidence drawer fully resolves.
-- ⚠️ **4 taps for Bill** (3 free credentials + 1 merge-to-deploy) — exact steps below. None block the core demo.
+- ✅ **Exa is LIVE** — PR #8 merged + deployed, `EXA_API_KEY` set, verified returning real complaint URLs.
+- ⚠️ **2 optional taps left for Bill** (Reddit keys, Apollo decision) — neither blocks the demo.
 
-### 👉 THE ONE NEXT ACTION (Bill)
-**Merge draft PR #8** → it auto-deploys the `why_now`/`riskiest_assumption` fields + the Exa adapter. Then I re-run the dental roadmap to light up the new fields. _(Everything else in the demo already works without this.)_
+### 👉 THE ONE NEXT ACTION
+✅ **The engine is fully live and demo-ready.** PR #8 merged + deployed; `why_now`/`riskiest_assumption` populated (4/4); **Exa connector live and verified** (returned 7 real Dentrix/Open-Dental complaint URLs on a test).
+**Only thing left to make it *visibly* cooler:** the → Cowork **Lovable card polish** (surface `why_now`/`riskiest_assumption` + Exa label + sharper copy — ready-to-paste brief in the appendix). Optional: Reddit keys to widen the mesh.
 
 ---
 
@@ -30,15 +32,13 @@ On `/signal`, pick **Dental practices** (or type any vertical and hit "Run a fre
 - a **"Backed by N public complaints"** live count (no fabricated numbers — queried live);
 - an **Evidence drawer of REAL, clickable source URLs**.
 
-**Today's dental scan output (real, from the live engine):**
-> _Market read: "The dental market is suffering from 'incumbent fatigue.'"_
-> 1. **Rx-Guardian** — auto-recovery for the e-Prescribe 2FA lockout that blocks prescribing for weeks _(build · S · conf 95)_
-> 2. **FlowPanel** — one-click scheduler overlay on legacy PMS _(pre-sell · M · 88)_
-> 3. **Universal Claim Bridge** — kills manual claim re-entry for non-integrated carriers _(build · M · 82)_
-> 4. **OpenPractice License Manager** — tames per-workstation "penalty" fees _(partner · L · 75)_
-> 5. **SyncShield Performance Layer** — fixes multi-location sync lag/crashes _(pre-sell · L · 70)_
+**Today's dental scan output (real, live, now with the new `why_now` / `riskiest_assumption` fields):**
+> 1. **One-Click Treatment Scheduler** _(pre-sell · M · 90)_ — *why now:* staff at a breaking point with "excessive clicking." *riskiest assumption:* overlaying legacy desktop PMS without a formal API.
+> 2. **e-Prescription 2FA Recovery Bot** _(build · S · 85)_ — *why now:* dentists locked out of prescribing for *weeks* after a phone change. *riskiest assumption:* that e-Prescribe vendors allow 3rd-party identity verification.
+> 3. **Universal Insurance Attachment Bridge** _(partner · L · 75)_ — *why now:* rising denial rates. *riskiest assumption:* AI reliably handling variable per-carrier attachment rules.
+> 4. _(+1 more)_
 
-Live data: **429** real signals · **429** distinct source URLs · **0** synthetic · **5/5** opportunities trace to evidence.
+Live data: **429** real signals · **429** distinct source URLs · **0** synthetic · **5/5** candidates trace to evidence · **4/4** opportunities now carry `why_now` + `riskiest_assumption`.
 
 ---
 
@@ -57,13 +57,13 @@ Live data: **429** real signals · **429** distinct source URLs · **0** synthet
 
 ---
 
-## ⚠️ Blocked on Bill — 4 taps, each one action
+## Bill gates — 2 done, 2 optional left
 
-| # | Tap | Steps |
+| # | Tap | Status |
 |---|---|---|
-| 1 | **Merge PR #8** (the deploy) | Merge the draft PR → Lovable auto-deploys the updated edge functions. Lights up `why_now`/`riskiest_assumption` + the Exa adapter. |
-| 2 | **Exa key** (free, 1k/mo) | exa.ai → sign in → API Keys → copy. Supabase → project `brpqtaaknxdqkjvzfvlo` → Edge Functions → Secrets → add `EXA_API_KEY`. Adapter auto-joins the mesh next scan. |
-| 3 | **Reddit keys** (free) | Per `docs/REDDIT_KEYS_WALKTHROUGH.md`. Add `REDDIT_CLIENT_ID` + `REDDIT_CLIENT_SECRET` to Supabase secrets. (Reddit *pages* already show via web search meanwhile.) |
+| ~~1~~ | ~~**Merge PR #8** (the deploy)~~ | ✅ **DONE** — merged + both edge functions deployed live (no public publish). `why_now`/`riskiest_assumption` populated. |
+| ~~2~~ | ~~**Exa key**~~ | ✅ **DONE** — Bill supplied the key; set as `EXA_API_KEY` via the Lovable agent. Verified live: Exa returns real complaint URLs. |
+| 3 | **Reddit keys** (free, optional) | Per `docs/REDDIT_KEYS_WALKTHROUGH.md`. Add `REDDIT_CLIENT_ID` + `REDDIT_CLIENT_SECRET` to Supabase secrets to add first-party Reddit. (Reddit *pages* already show via web search + Exa meanwhile.) |
 | 4 | **Apollo** (paid) | **Do not act** — paid signup + a fit call. Flagged to Cowork (below). |
 
 ---
@@ -82,7 +82,7 @@ Live data: **429** real signals · **429** distinct source URLs · **0** synthet
 |---|---|---|
 | 1 | Verify **W8** + **W6** | W8 ✅ verified done. W6 (candidate→simulator deepen fn) ⏸️ **deferred on purpose** — invisible plumbing; the *visible* dogfood ("Sketch this idea" → /simulate) already ships and works. Building the heavy version doesn't move the Eric demo. Available on request. |
 | 2 | Scanner **visibly cool** | ✅ Base already meets the bar (live per-source steps, real-URL evidence drawer, ranked opps, no fake numbers). 🔼 `why_now`/`riskiest_assumption` added (deploy-gated) + UI surfacing → Cowork brief. |
-| 3 | Wire **top-3 connectors** | Exa ✅ coded/tested/PR'd (+ key → Bill). Reddit → Bill keys. Apollo → Cowork. |
+| 3 | Wire **top-3 connectors** | **Exa ✅ LIVE** (coded, merged, deployed, key set, verified returning real URLs). Reddit → optional Bill keys. Apollo → Cowork. |
 | 4 | **Real scan** on one vertical | ✅ dental-practices, today's data, on the board. |
 | 5 | **Sub-agents** | ✅ Exa query-shape validation + scanner copy (copy used in the appendix brief). |
 
@@ -94,7 +94,9 @@ No paid signups (Apollo flagged only). Nothing sent to Eric. No credentials ente
 ---
 
 ## 🗒️ Log
-- **2026-06-25** — Read overnight package + coordination + workspace map + checkpoints. Verified live DB (overrides stale docs); confirmed W8 done. Ran full real scan on `dental-practices` (429 signals → 5 opportunities, traceable). Coded + tested Exa adapter and `why_now`/`riskiest_assumption`; pushed → **draft PR #8**. Registered dental on the board. Subscribed to PR #8; armed an hourly check-in. Wrote/updated this file. **Next: Bill merges PR #8.**
+- **2026-06-25 (am)** — Read overnight package + coordination + workspace map + checkpoints. Verified live DB (overrides stale docs); confirmed W8 done. Ran full real scan on `dental-practices` (429 signals → opportunities, traceable). Coded + tested Exa adapter and `why_now`/`riskiest_assumption`; pushed → draft PR #8. Registered dental on the board. Spawned sub-agents (Exa validation + copy).
+- **2026-06-25 (cont.)** — Bill merged PR #8. Deployed `signal-collect` + `opportunity-roadmap` live via the Lovable agent (edge-functions only, no public publish). Re-ran the dental roadmap → **4/4 opportunities now carry `why_now` + `riskiest_assumption`** (honest, grounded). Pipeline live end-to-end.
+- **2026-06-25 (cont.)** — Bill supplied the Exa key; set `EXA_API_KEY` via the Lovable agent. **Verified Exa live** — a bounded test returned 7 real first-person complaint URLs (Dentrix idea board, Open Dental forum). All 3 recommended connectors now resolved: **Exa live**, Reddit = optional keys, Apollo = Cowork. **Next: → Cowork Lovable card polish to surface the new fields.**
 
 ---
 
