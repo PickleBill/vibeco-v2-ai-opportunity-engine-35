@@ -592,12 +592,89 @@ const perplexityAdapter: Adapter = {
   },
 };
 
+// ─────────────────────────── Exa (neural web search) ───────────────────────────
+// Dormant until EXA_API_KEY is set. Exa is a NEURAL search engine — phrasing the
+// *ideal complaint page* beats keyword/`site:` operators (which it ignores). We
+// hit the REST /search API directly because the knobs we need (neural type +
+// full-text `contents`) aren't on the MCP surface. One pain-framed query per
+// keyword; fan-out + per-query result count are capped to bound cost.
+const EXA_URL = "https://api.exa.ai/search";
+
+// Obvious vendor-marketing hosts that *describe* pain to sell a fix — not real
+// first-person complaints. Cheap denylist; clustering handles the rest.
+const EXA_JUNK_HOST = /(^|\.)(arkenea|dentistryiq|dentalbase|denzif|turnup)\./i;
+
+interface ExaResult { url?: string; title?: string; text?: string; author?: string; publishedDate?: string; }
+
+async function exaSearch(key: string, query: string, numResults: number): Promise<ExaResult[]> {
+  const res = await fetch(EXA_URL, {
+    method: "POST",
+    headers: { "x-api-key": key, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query,
+      type: "neural",
+      numResults,
+      contents: { text: { maxCharacters: 2000 } },
+    }),
+  });
+  if (res.status === 429) throw new Error("RATE_LIMIT");
+  if (!res.ok) throw new Error(`exa ${res.status}`);
+  const json = await res.json().catch(() => ({}));
+  return Array.isArray((json as Record<string, any>)?.results) ? (json as Record<string, any>).results : [];
+}
+
+const exaAdapter: Adapter = {
+  name: "exa",
+  isConfigured: (ctx) => !!Deno.env.get("EXA_API_KEY") && ctx.keywords.length > 0,
+  async collect(ctx) {
+    const key = Deno.env.get("EXA_API_KEY")!;
+    // Neural search rewards describing the page we want, not boolean keywords.
+    const queries = ctx.keywords.slice(0, 5).map(
+      (kw) => `Forum post or review where someone in ${ctx.vertical} complains that ${kw} is frustrating, buggy, slow, or broken`,
+    );
+    const perQuery = Math.min(Math.max(Math.round((ctx.limit || 30) / queries.length), 4), 8);
+
+    const settled = await Promise.allSettled(queries.map((q) => exaSearch(key, q, perQuery)));
+    let rateLimited = false, failures = 0, posts = 0;
+    const items: Item[] = [];
+    for (const r of settled) {
+      if (r.status !== "fulfilled") {
+        failures++;
+        if (String((r as PromiseRejectedResult).reason?.message) === "RATE_LIMIT") rateLimited = true;
+        continue;
+      }
+      for (const hit of r.value) {
+        posts++;
+        const url = hit.url;
+        const body = (hit.text ?? "").trim();
+        if (!url || !/^https?:\/\//.test(url) || body.length < 80) continue;
+        if (EXA_JUNK_HOST.test(url)) continue;
+        items.push({
+          source: sourceFor(url),
+          source_url: url,
+          author_hash: hit.author ? hashAuthor(String(hit.author)) : undefined,
+          title: hit.title || undefined,
+          body: body.slice(0, 4000),
+          product_tag: ctx.product,
+          raw: { via: "exa", published_date: hit.publishedDate ?? null },
+        });
+      }
+    }
+    const degraded = rateLimited || failures > 0;
+    const note = rateLimited
+      ? `Exa rate-limited (429) on ${failures}/${queries.length} queries`
+      : failures > 0 ? `${failures}/${queries.length} Exa queries failed` : "";
+    return { items, status: degraded ? "degraded" : "ok", note, posts };
+  },
+};
+
 const ADAPTERS: Adapter[] = [
   redditAdapter,
   hackerNewsAdapter,
   aiGatewayScoutAdapter,
   anthropicWebSearchAdapter,
   perplexityAdapter,
+  exaAdapter,
   firecrawlAdapter,
 ];
 

@@ -41,6 +41,8 @@ export interface RoadmapOpportunity {
   motion: "build" | "sell" | "partner";
   effort: "S" | "M" | "L";
   roi: string;                         // directional, qualitative — labeled illustrative in the UI
+  why_now: string;                     // the recent shift in the signal that makes this urgent now
+  riskiest_assumption: string;         // the load-bearing assumption the evidence does NOT yet prove
   confidence: number;                  // 0..100
   based_on: string[];                  // candidate / theme titles this draws from
 }
@@ -83,10 +85,12 @@ const roadmapTool = {
               motion: { type: "string", enum: ["build", "sell", "partner"], description: "build = build it ourselves; sell = sell/validate before building; partner = integrate with an incumbent." },
               effort: { type: "string", enum: ["S", "M", "L"], description: "Rough build effort." },
               roi: { type: "string", description: "Directional ROI / impact rationale (hours saved, revenue unlocked). Qualitative — no invented precise figures." },
+              why_now: { type: "string", description: "Why this is urgent NOW — the recent shift, rising trend, or breaking point IN THE SUPPLIED SIGNAL that makes this the moment to act. One or two sentences, grounded in the data, not a generic 'AI is hot' line." },
+              riskiest_assumption: { type: "string", description: "The single assumption most likely to be wrong — the load-bearing thing that would have to be true for this to work, that the evidence does NOT yet prove. Honest and specific; this is a validation tool, not a sales deck." },
               confidence: { type: "number", description: "0-100, how strongly the evidence supports this." },
               based_on: { type: "array", items: { type: "string" }, description: "Which supplied cluster/theme titles this draws from." },
             },
-            required: ["rank", "title", "problem", "build", "customer", "motion", "effort", "roi", "confidence", "based_on"],
+            required: ["rank", "title", "problem", "build", "customer", "motion", "effort", "roi", "why_now", "riskiest_assumption", "confidence", "based_on"],
             additionalProperties: false,
           },
         },
@@ -123,6 +127,8 @@ export async function generateRoadmap(input: RoadmapInput): Promise<OpportunityR
     "- `customer` must be a specific ICP (role + company profile), never 'small businesses'.",
     "- Recommend a motion: build (build it ourselves now), sell (validate/pre-sell before building), or partner (integrate with an incumbent).",
     "- ROI is DIRECTIONAL and qualitative (hours saved, deals unlocked). Do not fabricate precise dollar/percentage figures.",
+    "- `why_now`: cite the recent shift, rising trend, or breaking point IN THE SIGNAL that makes this urgent now — not a generic 'AI is hot' line. If the durable themes show a rising trend, use it.",
+    "- `riskiest_assumption`: name the ONE thing most likely to be wrong — the load-bearing assumption the evidence does NOT yet prove. Be honest; this is a tool to validate leads, not a sales deck.",
     "- Rank by opportunity strength = pain intensity × how addressable it is with an AI-ops automation.",
   ].join("\n");
 
