@@ -16,3 +16,9 @@ verify_jwt = false
 # the AI Gateway and persists with the service role.
 [functions.opportunity-roadmap]
 verify_jwt = false
+
+# W6 dogfood loop: admin-triggered from the board; runs a feature candidate back
+# through the v1 Simulator (simulate-idea + 3 personas) and persists with the
+# service role. Same posture as opportunity-roadmap (no user JWT required).
+[functions.signal-candidate-deepen]
+verify_jwt = false
