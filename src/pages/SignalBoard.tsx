@@ -426,12 +426,10 @@ const SignalBoard = () => {
     return list;
   }, [candidates, query, sortBy, sourceFilter]);
 
-  const optionTags = useMemo(() => {
-    const set = new Set<string>();
-    verticals.forEach((v) => set.add(v.product_tag));
-    productTags.forEach((t) => set.add(t));
-    return Array.from(set);
-  }, [verticals, productTags]);
+  // Curated board only — only registered signal_verticals rows show up here.
+  // Anonymous public `scan-*` product_tags from feature_candidates are excluded.
+  const optionTags = useMemo(() => verticals.map((v) => v.product_tag), [verticals]);
+
   const labelFor = (tag: string | null) => (tag ? verticals.find((v) => v.product_tag === tag)?.vertical ?? tag : "");
 
   const isSample = !activeTag;
