@@ -108,3 +108,22 @@ Checkpoint line index (monotonic; highest P# with PASS wins on resume):
 **Risks:** None blocking. Public flip + deploys held for Bill (the only two gates).
 **Next action:** Run complete. Hourly PR check-in armed; subscription active on PR #3.
 **Needs Bill:** yes — (1) publish-to-public tap; (2) deploy the staged backend fixes; (3) hero headline call.
+
+---
+
+# Post-run follow-ups (2026-06-25) — executing the approved go-forward plan
+
+Plan: publish (Bill's tap) → ① deploy cluster_id fix → ② public add-a-vertical button (lite/full tiers). Cost model locked by Bill: LITE public (HN+scout, ~1/hr) / FULL admin.
+
+## F1 — Deploy the cluster_id evidence fix
+**Status:** PASS (live)
+**What changed:** Verified the live `signal-process` was still running pre-fix code (newly-clustered rows got `cluster_id=NULL`). Redeployed `signal-process` + `signal-collect` via the Lovable agent's edge-function deploy. Re-verified: post-deploy processing now stamps `signal_raw.cluster_id` (0 → linked). The per-candidate Evidence drawer chain works on all future scans. Existing rows stay go-forward only (their member→row mapping was never persisted).
+**Needs Bill:** no
+
+## F2 — Public "add-a-vertical" scan (lite/full tier)
+**Status:** PASS (backend live; frontend in preview)
+**What changed (backend, PRs #4/#5, deployed):** `signal-collect` honors `tier: 'lite'|'full'` (default full = unchanged). LITE runs only the cheap keyless adapters (HN + ai_gateway_scout) with a tight cap; the paid web-search adapters are held. Rate-limited before any spend: per-client 3/hr (stable `client_key`) + global 200/day backstop, via a new service-role `scan_requests` ledger. Pure tier-selection helpers + tests (suite 28 green).
+**What changed (frontend, Lovable, preview):** `OpportunityScan` upgraded into a real public flow — enter a vertical → persistent `client_key` → lite scan (collect→process→roadmap on a unique `scan-<slug>-<rand>` tag) → live stepper → inline evidence-backed opportunity cards (motion chip, effort, problem/build/why-it-pays, live "backed by N complaints" count, expandable real source links, "Sketch this idea" → /simulate). 429 → friendly "sign in for full scans". `SignalBoard` selector now lists only curated `signal_verticals` so public scans don't clutter it.
+**Evidence/tests:** End-to-end live run (freelance-developers): 13 HN posts → 3 traceable candidates → 3 real opportunities (conf 75–90); cluster_id linked; 0 public scans on the curated board. Lite tier verified (only HN+scout ran); per-client 429 verified on the 4th rapid scan; full tier unaffected. Lovable typecheck clean; homepage renders cleanly (browser screenshot). Test scan data cleaned up afterward.
+**Risks:** Lite scans are thinner (HN-led) by design — the UI says so honestly and nudges sign-in for the full multi-source scan. Browser smoke-test of the scan section was blocked by preview network/auth (env limitation), but the data path + render are verified.
+**Needs Bill:** publish-to-public tap (the build is in preview). Optional: the per-opportunity why_now/riskiest_assumption schema upgrade remains the top quality follow-up.
