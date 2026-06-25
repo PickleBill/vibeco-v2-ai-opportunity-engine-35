@@ -69,7 +69,7 @@ describe("roadmap idempotency key", () => {
 });
 
 describe("scan tier (public cost control)", () => {
-  const ALL = ["reddit", "hackernews", "ai_gateway_scout", "anthropic_web_search", "perplexity_sonar", "firecrawl"];
+  const ALL = ["reddit", "hackernews", "ai_gateway_scout", "anthropic_web_search", "perplexity_sonar", "exa", "firecrawl"];
 
   it("normalizeTier defaults to full, only 'lite' is lite", () => {
     expect(normalizeTier("lite")).toBe("lite");
@@ -87,8 +87,8 @@ describe("scan tier (public cost control)", () => {
   it("lite tier runs ONLY the cheap keyless adapters; holds the paid ones", () => {
     const { run, held } = selectTierAdapters(ALL, "lite");
     expect(run.sort()).toEqual(["ai_gateway_scout", "hackernews"]);
-    // the paid web-search adapters are held back so a public scan can't run up the bill
-    expect(held).toEqual(expect.arrayContaining(["firecrawl", "anthropic_web_search", "perplexity_sonar"]));
+    // the paid web-search adapters (incl. Exa) are held back so a public scan can't run up the bill
+    expect(held).toEqual(expect.arrayContaining(["firecrawl", "anthropic_web_search", "perplexity_sonar", "exa"]));
     expect(held).not.toContain("hackernews");
   });
 
