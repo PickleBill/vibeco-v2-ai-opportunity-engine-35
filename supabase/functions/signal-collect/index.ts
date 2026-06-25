@@ -698,9 +698,13 @@ serve(async (req) => {
       const sk = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
       if (su && sk) {
         const rl = createClient(su, sk, { auth: { persistSession: false } });
-        const ipRaw = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim()
-          || (typeof body.client_key === "string" ? body.client_key : "") || "anon";
-        const clientKey = hashAuthor(ipRaw); // never store the raw IP
+        // Prefer a stable client-supplied key (the frontend sends a persistent
+        // localStorage UUID); fall back to the forwarded IP. The global daily
+        // cap below is the real backstop regardless of key stability.
+        const ipRaw = (typeof body.client_key === "string" && body.client_key.trim())
+          || (req.headers.get("x-forwarded-for") || "").split(",")[0].trim()
+          || "anon";
+        const clientKey = hashAuthor(ipRaw); // never store the raw key/IP
         const PER_CLIENT_MAX = 3, WINDOW_MIN = 60, GLOBAL_DAILY_MAX = 200;
         const sinceHour = new Date(Date.now() - WINDOW_MIN * 60_000).toISOString();
         const sinceDay = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
