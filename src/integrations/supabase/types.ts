@@ -410,6 +410,30 @@ export type Database = {
           },
         ]
       }
+      scan_requests: {
+        Row: {
+          client_key: string
+          created_at: string
+          id: string
+          product_tag: string | null
+          tier: string
+        }
+        Insert: {
+          client_key: string
+          created_at?: string
+          id?: string
+          product_tag?: string | null
+          tier?: string
+        }
+        Update: {
+          client_key?: string
+          created_at?: string
+          id?: string
+          product_tag?: string | null
+          tier?: string
+        }
+        Relationships: []
+      }
       signal_clusters: {
         Row: {
           created_at: string | null
