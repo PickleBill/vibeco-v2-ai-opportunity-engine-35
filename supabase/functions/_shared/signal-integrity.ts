@@ -59,3 +59,33 @@ export function isTraceable(c: TraceableCandidate): boolean {
 export function roadmapKey(product_tag: string, scan_date: string): string {
   return `${product_tag}::${scan_date}`;
 }
+
+// ── Scan tiers ──────────────────────────────────────────────────────────────
+// Public self-serve scans run a LITE tier: only the cheap, keyless adapters
+// (Hacker News + the native AI-gateway scout). The paid web-search adapters
+// (Firecrawl / Anthropic web / Perplexity) are held for the FULL tier
+// (admin/cron) so an anonymous visitor can't run up the bill.
+export const LITE_ADAPTERS = ["hackernews", "ai_gateway_scout"] as const;
+
+export type ScanTier = "lite" | "full";
+
+export function normalizeTier(t: unknown): ScanTier {
+  return t === "lite" ? "lite" : "full";
+}
+
+/**
+ * Split the already-configured adapter names into the ones that run for this
+ * tier and the ones held back. `full` runs everything configured; `lite` runs
+ * only the cheap keyless adapters. Pure + stable order so it's testable.
+ */
+export function selectTierAdapters(
+  configuredNames: string[],
+  tier: ScanTier,
+): { run: string[]; held: string[] } {
+  if (tier === "full") return { run: [...configuredNames], held: [] };
+  const lite = new Set<string>(LITE_ADAPTERS);
+  return {
+    run: configuredNames.filter((n) => lite.has(n)),
+    held: configuredNames.filter((n) => !lite.has(n)),
+  };
+}

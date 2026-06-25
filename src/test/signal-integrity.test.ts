@@ -5,6 +5,8 @@ import {
   dedupeByKey,
   isTraceable,
   roadmapKey,
+  normalizeTier,
+  selectTierAdapters,
 } from "../../supabase/functions/_shared/signal-integrity.ts";
 
 describe("collection de-dupe (idempotency)", () => {
@@ -63,5 +65,36 @@ describe("roadmap idempotency key", () => {
   it("is one current roadmap per (product_tag, scan_date)", () => {
     expect(roadmapKey("restaurant-ops", "2026-06-24")).toBe("restaurant-ops::2026-06-24");
     expect(roadmapKey("a", "2026-06-24")).not.toBe(roadmapKey("a", "2026-06-25"));
+  });
+});
+
+describe("scan tier (public cost control)", () => {
+  const ALL = ["reddit", "hackernews", "ai_gateway_scout", "anthropic_web_search", "perplexity_sonar", "firecrawl"];
+
+  it("normalizeTier defaults to full, only 'lite' is lite", () => {
+    expect(normalizeTier("lite")).toBe("lite");
+    expect(normalizeTier("full")).toBe("full");
+    expect(normalizeTier(undefined)).toBe("full");
+    expect(normalizeTier("anything-else")).toBe("full");
+  });
+
+  it("full tier runs every configured adapter, holds none", () => {
+    const { run, held } = selectTierAdapters(ALL, "full");
+    expect(run).toEqual(ALL);
+    expect(held).toEqual([]);
+  });
+
+  it("lite tier runs ONLY the cheap keyless adapters; holds the paid ones", () => {
+    const { run, held } = selectTierAdapters(ALL, "lite");
+    expect(run.sort()).toEqual(["ai_gateway_scout", "hackernews"]);
+    // the paid web-search adapters are held back so a public scan can't run up the bill
+    expect(held).toEqual(expect.arrayContaining(["firecrawl", "anthropic_web_search", "perplexity_sonar"]));
+    expect(held).not.toContain("hackernews");
+  });
+
+  it("lite tier is a no-op when no cheap adapters are configured", () => {
+    const { run, held } = selectTierAdapters(["firecrawl", "perplexity_sonar"], "lite");
+    expect(run).toEqual([]);
+    expect(held).toEqual(["firecrawl", "perplexity_sonar"]);
   });
 });

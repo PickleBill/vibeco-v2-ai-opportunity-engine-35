@@ -4,7 +4,7 @@ import { handleCors, jsonResponse } from "../_shared/cors.ts";
 import { handleFunctionError } from "../_shared/error-handler.ts";
 import { callLLMWithTool } from "../_shared/llm-client.ts";
 import { selectModel } from "../_shared/model-router.ts";
-import { dedupeByKey } from "../_shared/signal-integrity.ts";
+import { dedupeByKey, normalizeTier, selectTierAdapters } from "../_shared/signal-integrity.ts";
 
 /**
  * Signal Mine — Stage 1: Collect.
@@ -682,11 +682,52 @@ serve(async (req) => {
       ];
     }
 
-    // Run every configured adapter in parallel.
+    // Run every configured adapter in parallel — but honor the scan tier.
+    // LITE (public self-serve) runs only the cheap keyless adapters; the paid
+    // web-search adapters are held for FULL (admin/cron) so an anonymous
+    // visitor can't run up the bill.
+    const tier = normalizeTier(body.tier);
+    // Lite scans stay small + cheap (HN/scout only, tight per-adapter cap).
+    if (tier === "lite") ctx.limit = Math.min(ctx.limit || 12, 15);
+
+    // Rate-limit LITE (public self-serve) scans so an anonymous visitor can't
+    // spam the pipeline: per-client cap + a global daily backstop. Refuse BEFORE
+    // running any adapter (i.e. before spending). Full (admin/cron) scans skip this.
+    if (tier === "lite") {
+      const su = Deno.env.get("SUPABASE_URL");
+      const sk = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (su && sk) {
+        const rl = createClient(su, sk, { auth: { persistSession: false } });
+        const ipRaw = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim()
+          || (typeof body.client_key === "string" ? body.client_key : "") || "anon";
+        const clientKey = hashAuthor(ipRaw); // never store the raw IP
+        const PER_CLIENT_MAX = 3, WINDOW_MIN = 60, GLOBAL_DAILY_MAX = 200;
+        const sinceHour = new Date(Date.now() - WINDOW_MIN * 60_000).toISOString();
+        const sinceDay = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
+        const [mine, global] = await Promise.all([
+          rl.from("scan_requests").select("id", { count: "exact", head: true })
+            .eq("client_key", clientKey).gte("created_at", sinceHour),
+          rl.from("scan_requests").select("id", { count: "exact", head: true })
+            .eq("tier", "lite").gte("created_at", sinceDay),
+        ]);
+        if ((mine.count ?? 0) >= PER_CLIENT_MAX) {
+          return jsonResponse({ error: `You've hit the free limit of ${PER_CLIENT_MAX} scans per hour. Sign in for full, unlimited scans.`, rate_limited: true }, 429);
+        }
+        if ((global.count ?? 0) >= GLOBAL_DAILY_MAX) {
+          return jsonResponse({ error: "Free scans are at capacity for today — try again tomorrow or sign in.", rate_limited: true }, 429);
+        }
+        await rl.from("scan_requests").insert({ client_key: clientKey, product_tag: product, tier });
+      }
+    }
+
     const sourceStatus: { name: string; status: string; note: string; posts: number }[] = [];
-    const configured = ADAPTERS.filter((a) => a.isConfigured(ctx));
+    const allConfigured = ADAPTERS.filter((a) => a.isConfigured(ctx));
     const skipped = ADAPTERS.filter((a) => !a.isConfigured(ctx));
     for (const a of skipped) sourceStatus.push({ name: a.name, status: "skipped", note: "not configured", posts: 0 });
+
+    const { run: runNames, held } = selectTierAdapters(allConfigured.map((a) => a.name), tier);
+    const configured = allConfigured.filter((a) => runNames.includes(a.name));
+    for (const name of held) sourceStatus.push({ name, status: "skipped", note: "held for full scan (lite tier)", posts: 0 });
 
     const runs = await Promise.allSettled(configured.map((a) => a.collect(ctx)));
     let items: Item[] = [];
