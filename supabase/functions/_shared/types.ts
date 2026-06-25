@@ -215,3 +215,18 @@ export interface OpportunityRoadmap {
   market_read: string;
   opportunities: RoadmapOpportunity[];
 }
+
+// ─── Signal Candidate Deepen (W6 dogfood loop: candidate → v1 Simulator) ───
+
+// Persisted shape of public.signal_candidate_simulations — one current deep read
+// per feature candidate (simulate-idea brief + Skeptic/Customer/Builder personas).
+export interface SignalCandidateSimulation {
+  id: string;
+  feature_candidate_id: string;
+  product_tag: string | null;
+  idea_prompt: string;
+  brief: BriefData;
+  perspectives: PerspectiveResult[];
+  model_mode: AnalysisMode | null;
+  created_at: string;
+}
