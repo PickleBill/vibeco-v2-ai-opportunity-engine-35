@@ -438,106 +438,112 @@ const SignalBoard = () => {
   const ingestAge = daysSince(latestScanDate);
   const verticalLabel = labelFor(activeTag) || "your market";
 
+  // ── Derived display values ─────────────────────────────────────
+  const heroCandidate = visible[0] ?? null;
+  const restCandidates = visible.slice(1);
+  const heroOpp = roadmap?.opportunities?.[0] ?? null;
+  const loudnessLabel = (s: number) =>
+    s >= 75 ? "Severe" : s >= 55 ? "High" : s >= 35 ? "Medium" : "Mild";
+  const effortLabel = (e: "S" | "M" | "L") =>
+    e === "S" ? "Small lift" : e === "L" ? "Large lift" : "Medium lift";
+  const moveLabel = heroOpp ? motionFor(heroOpp.motion).label : "Sketch it";
+  const statusLine = (() => {
+    if (isSample) return "Pick a vertical to load live signal";
+    if (isEmpty) return "No live data yet";
+    const parts: string[] = [];
+    if (ingestAge !== null) parts.push(`Last scan · ${ingestAge === 0 ? "today" : `${ingestAge}d ago`}`);
+    if (verticalEvidenceCount !== null) parts.push(`${verticalEvidenceCount.toLocaleString()} sources`);
+    parts.push(`${candidates.length} candidates`);
+    return parts.join(" · ");
+  })();
+
+  const sketchPrefill = (c: Candidate) =>
+    `Problem: ${c.problem}\n\nProposed: ${c.proposed_solution}\n\nGrounded in real signal (${c.evidence.member_count} mentions across ${c.evidence.sources.map(niceSource).join(", ")}).`;
+
   return (
     <TooltipProvider delayDuration={200}>
       <HelmetProvider>
-        <Helmet><title>Signal Board · what people are complaining about right now</title></Helmet>
-        <div className="min-h-screen bg-background text-foreground">
-          <Navbar />
-          <main className="container max-w-4xl py-10">
+        <Helmet><title>Signal Board · what real people are complaining about right now</title></Helmet>
 
-            {/* ── Header: state the question, then answer it. ────────── */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 text-primary">
-                  <Radar className="h-5 w-5" />
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em]">Signal Mine · live</span>
-                </div>
-                <h1 className="mt-2 font-display text-2xl sm:text-3xl font-extrabold tracking-tight">
-                  What {verticalLabel} is complaining about right now
-                </h1>
-                <p className="mt-2 max-w-xl text-sm sm:text-base text-muted-foreground leading-relaxed">
-                  Real pain mined from public discussion (Reddit, Hacker News, Trustpilot, G2, Capterra, web),
-                  clustered into ranked feature candidates. Every claim links to its source.
-                </p>
+        <div className="min-h-screen bg-[#0a0a1a] text-[#ECECF5]" style={{ fontFamily: "'Outfit', system-ui, sans-serif" }}>
+          <Navbar />
+
+          {/* ── Header: vertical selector + status line ───────────── */}
+          <header className="max-w-7xl mx-auto px-6 lg:px-10 pt-24 pb-6 flex flex-wrap items-center justify-between gap-4 border-b border-[#1e1e5a]">
+            <div className="flex items-center gap-5 min-w-0">
+              <div className="flex items-center gap-2 text-[#4f46e5] shrink-0">
+                <Radar className="h-4 w-4" />
+                <span className="text-[11px] font-bold tracking-[0.2em] uppercase">Signal Board</span>
               </div>
-              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:shrink-0">
-                {optionTags.length > 0 && (
-                  <Select value={activeTag ?? undefined} onValueChange={(v) => setActiveTag(v)}>
-                    <SelectTrigger className="h-10 flex-1 min-w-[180px] sm:w-[210px] sm:flex-none text-sm">
-                      <SelectValue placeholder="Vertical" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {optionTags.map((t) => <SelectItem key={t} value={t}>{labelFor(t)}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                )}
-                {isAdmin && (
-                  <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" title="Add a vertical" onClick={() => setAddOpen(true)}>
+              <div className="h-4 w-px bg-[#1e1e5a] hidden sm:block" />
+              {optionTags.length > 0 ? (
+                <Select value={activeTag ?? undefined} onValueChange={(v) => setActiveTag(v)}>
+                  <SelectTrigger className="h-9 min-w-[170px] bg-transparent border-[#1e1e5a] text-[#ECECF5] hover:border-[#4f46e5]">
+                    <SelectValue placeholder="Pick a vertical" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#141432] border-[#1e1e5a] text-[#ECECF5]">
+                    {optionTags.map((t) => <SelectItem key={t} value={t}>{labelFor(t)}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className="text-sm text-[#8A8AA8]">No verticals configured</span>
+              )}
+              <span className="hidden md:inline text-xs text-[#8A8AA8] font-medium tracking-wide truncate">
+                {statusLine}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {isAdmin && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-[#8A8AA8] hover:bg-[#141432] hover:text-[#ECECF5]"
+                    title="Add a vertical"
+                    onClick={() => setAddOpen(true)}
+                  >
                     <Plus className="h-4 w-4" />
                   </Button>
-                )}
-                {isAdmin && (
-                  <Button onClick={runScan} disabled={scanning} className="h-10 gap-2">
-                    {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  <Button
+                    onClick={runScan}
+                    disabled={scanning}
+                    className="h-9 gap-2 bg-[#141432] hover:bg-[#1e1e5a] text-[#ECECF5] border border-[#1e1e5a]"
+                  >
+                    {scanning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                     {scanning ? "Scanning…" : "Run scan"}
                   </Button>
-                )}
-              </div>
-            </div>
-
-            {/* ── One-line status. No 4-tile placeholder grid. ──────── */}
-            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
-              {isSample ? (
-                <Badge variant="outline" className="gap-1.5 border-warning/50 text-warning">
-                  <span className="h-1.5 w-1.5 rounded-full bg-warning" /> Pick a vertical to load live data
-                </Badge>
-              ) : isEmpty ? (
-                <Badge variant="outline" className="gap-1.5 border-muted-foreground/40 text-muted-foreground">
-                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" /> No live data yet
-                </Badge>
-              ) : (
-                <Badge className="gap-1.5 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/15">
-                  <Radio className="h-3 w-3" /> Live
-                </Badge>
-              )}
-              {!isSample && !isEmpty && (
-                <span className="text-muted-foreground">
-                  <span className="text-foreground font-medium">{candidates.length}</span> candidates ·
-                  <span className="text-foreground font-medium ml-1">{themes.length}</span> durable themes ·
-                  {ingestAge !== null && (
-                    <> last scan <span className={ingestAge <= 2 ? "text-emerald-300" : "text-warning"}>
-                      {ingestAge === 0 ? "today" : `${ingestAge}d ago`}
-                    </span></>
-                  )}
-                </span>
-              )}
-              {!isSample && ingestAge !== null && ingestAge > 2 && (
-                <Badge variant="outline" className="gap-1.5 text-warning border-warning/40">
-                  <AlertTriangle className="h-3 w-3" /> stale — rerun scan
-                </Badge>
+                </>
               )}
             </div>
+          </header>
 
-            {/* ── Live scan stepper — proves the pipeline is real. ──── */}
-            {(scanning || scanSteps.length > 0) && (
-              <Card className="mt-4 p-3">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+          {/* mobile status line */}
+          <div className="md:hidden max-w-7xl mx-auto px-6 pt-3 text-xs text-[#8A8AA8]">
+            {statusLine}
+          </div>
+
+          {/* Live scan stepper */}
+          {(scanning || scanSteps.length > 0) && (
+            <div className="max-w-7xl mx-auto px-6 lg:px-10 mt-4">
+              <div className="rounded-xl border border-[#1e1e5a] bg-[#141432] p-3">
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-[#8A8AA8] mb-2">
                   {scanning ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3 text-emerald-400" />}
                   {scanning ? "Mining live sources" : "Last run"}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {scanSteps.length === 0 && scanning && (
-                    <span className="text-xs text-muted-foreground">Spinning up adapters…</span>
+                    <span className="text-xs text-[#8A8AA8]">Spinning up adapters…</span>
                   )}
                   {scanSteps.map((s) => (
-                    <Badge
+                    <span
                       key={s.name}
-                      variant="outline"
-                      className={`gap-1.5 ${
-                        s.status === "skipped" ? "opacity-40" :
-                        s.status === "degraded" ? "border-warning/40 text-warning" :
-                        "border-emerald-500/40 text-emerald-300"
+                      className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full border ${
+                        s.status === "skipped"
+                          ? "opacity-40 border-[#1e1e5a] text-[#8A8AA8]"
+                          : s.status === "degraded"
+                          ? "border-amber-500/40 text-amber-300"
+                          : "border-emerald-500/40 text-emerald-300"
                       }`}
                     >
                       {s.status === "skipped" ? <X className="h-3 w-3" /> :
@@ -545,434 +551,337 @@ const SignalBoard = () => {
                        <CheckCircle2 className="h-3 w-3" />}
                       {niceSource(s.name)}
                       {s.status !== "skipped" && <span className="opacity-70">· {s.posts}</span>}
-                    </Badge>
+                    </span>
                   ))}
                 </div>
-              </Card>
+              </div>
+            </div>
+          )}
+
+          <main className="max-w-7xl mx-auto px-6 lg:px-10 pt-12 pb-24">
+
+            {/* ── HERO: Opportunity of the day ───────────────────── */}
+            {heroCandidate ? (
+              <section className="animate-in fade-in duration-700">
+                <div className="flex flex-col gap-4 mb-10">
+                  <span className="text-[#4f46e5] text-xs font-bold tracking-[0.25em] uppercase">
+                    Opportunity of the day
+                  </span>
+                  <h1
+                    className="font-extrabold tracking-tight leading-[1.05] max-w-4xl"
+                    style={{ fontSize: "clamp(2.25rem, 5vw, 4.5rem)" }}
+                  >
+                    {heroCandidate.cluster_theme}
+                  </h1>
+                </div>
+
+                <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+                  {/* LEFT: argument */}
+                  <div className="lg:col-span-7 space-y-10">
+                    <div className="space-y-3">
+                      <p className="text-[#8A8AA8] text-xs font-bold uppercase tracking-[0.2em]">The repeated pain</p>
+                      <p className="text-lg sm:text-xl text-[#ECECF5] leading-relaxed">
+                        {heroCandidate.problem}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-6 border-y border-[#1e1e5a] py-8">
+                      <div>
+                        <p className="text-[#8A8AA8] text-[11px] font-bold uppercase mb-1.5 tracking-wider">How sure we are</p>
+                        <p className="text-2xl font-bold tabular-nums">{Math.round(heroCandidate.confidence)}%</p>
+                      </div>
+                      <div>
+                        <p className="text-[#8A8AA8] text-[11px] font-bold uppercase mb-1.5 tracking-wider">How loud the complaint is</p>
+                        <p className="text-2xl font-bold">{loudnessLabel(heroCandidate.pain_score)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[#8A8AA8] text-[11px] font-bold uppercase mb-1.5 tracking-wider">Lift</p>
+                        <p className="text-2xl font-bold">{effortLabel(heroCandidate.effort)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[#8A8AA8] text-[11px] font-bold uppercase mb-1.5 tracking-wider">Recommended move</p>
+                        <p className="text-2xl font-bold">{moveLabel}</p>
+                      </div>
+                    </div>
+
+                    {/* Evidence quotes inline */}
+                    {heroCandidate.representative_quotes?.length > 0 && (
+                      <div className="space-y-4">
+                        <p className="text-[#8A8AA8] text-xs font-bold uppercase tracking-[0.2em]">
+                          What people are actually saying ({heroCandidate.evidence.member_count} real posts)
+                        </p>
+                        <div className="space-y-4">
+                          {heroCandidate.representative_quotes.slice(0, 2).map((q, i) => {
+                            const src = heroCandidate.evidence.sources[i] ?? heroCandidate.evidence.sources[0];
+                            return (
+                              <blockquote
+                                key={i}
+                                className="rounded-xl border border-[#1e1e5a] bg-[#141432] p-6 italic text-[#ECECF5]/90 relative"
+                              >
+                                <Quote className="absolute top-4 right-4 h-4 w-4 text-[#4f46e5]/40" />
+                                <p className="leading-relaxed">"{q}"</p>
+                                {src && (
+                                  <p className="mt-3 not-italic text-xs text-[#4f46e5] font-bold tracking-wide">
+                                    {niceSource(src)}
+                                  </p>
+                                )}
+                              </blockquote>
+                            );
+                          })}
+                        </div>
+
+                        {/* Real source links */}
+                        {heroCandidate.cluster_id && (
+                          <div>
+                            <button
+                              onClick={() => toggleExpand(heroCandidate)}
+                              className="text-xs font-bold text-[#4f46e5] inline-flex items-center gap-1.5 hover:brightness-125"
+                            >
+                              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expandedId === (heroCandidate.id ?? heroCandidate.cluster_theme) ? "rotate-180" : ""}`} />
+                              {expandedId === (heroCandidate.id ?? heroCandidate.cluster_theme)
+                                ? "Hide source posts"
+                                : `Show ${heroCandidate.evidence.member_count} source posts`}
+                            </button>
+                            {expandedId === (heroCandidate.id ?? heroCandidate.cluster_theme) && (
+                              <div className="mt-3 space-y-1.5 rounded-lg border border-[#1e1e5a] bg-[#0a0a1a] p-3">
+                                {!(heroCandidate.cluster_id && evidenceCache[heroCandidate.cluster_id]) ? (
+                                  <div className="flex items-center gap-2 text-xs text-[#8A8AA8]">
+                                    <Loader2 className="h-3 w-3 animate-spin" /> Loading source posts…
+                                  </div>
+                                ) : evidenceCache[heroCandidate.cluster_id!].length === 0 ? (
+                                  <p className="text-xs text-[#8A8AA8]">No source rows linked yet.</p>
+                                ) : (
+                                  evidenceCache[heroCandidate.cluster_id!].slice(0, 8).map((r) => (
+                                    <a
+                                      key={r.id}
+                                      href={r.source_url ?? "#"}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="group flex items-start gap-2 text-xs hover:bg-[#141432] rounded p-1.5 transition"
+                                    >
+                                      <span className="text-[10px] uppercase tracking-wider text-[#4f46e5] font-bold shrink-0 mt-0.5">{niceSource(r.source)}</span>
+                                      <span className="flex-1 text-[#ECECF5]/80 group-hover:text-[#ECECF5] line-clamp-2">
+                                        {r.title || r.body?.slice(0, 140) || "(untitled)"}
+                                      </span>
+                                      <ExternalLink className="h-3 w-3 text-[#8A8AA8] group-hover:text-[#4f46e5] shrink-0 mt-0.5" />
+                                    </a>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* RIGHT: strategy panel (sticky) */}
+                  <div className="lg:col-span-5 lg:sticky lg:top-24">
+                    <div className="bg-[#141432] p-8 rounded-2xl border border-[#1e1e5a] space-y-7">
+                      <div>
+                        <h3 className="text-[11px] font-bold text-[#8A8AA8] uppercase tracking-[0.2em] mb-5">
+                          {heroOpp ? "Strategy" : "What we'd build"}
+                        </h3>
+                        {heroOpp ? (
+                          <div className="space-y-5 text-sm">
+                            <div>
+                              <p className="font-bold text-[#ECECF5] mb-1">What we'd build</p>
+                              <p className="text-[#ECECF5]/75 leading-relaxed">{heroOpp.build}</p>
+                            </div>
+                            <div>
+                              <p className="font-bold text-[#ECECF5] mb-1">Who'd buy it</p>
+                              <p className="text-[#ECECF5]/75 leading-relaxed">{heroOpp.customer}</p>
+                            </div>
+                            {heroOpp.roi && (
+                              <div>
+                                <p className="font-bold text-[#ECECF5] mb-1">Why it pays</p>
+                                <p className="text-[#ECECF5]/75 leading-relaxed">{heroOpp.roi}</p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-[#ECECF5]/80 leading-relaxed">
+                            {heroCandidate.proposed_solution || "Riff this signal in Sketchpad to draft a build."}
+                          </p>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => navigate("/simulate", { state: { prefillIdea: sketchPrefill(heroCandidate) } })}
+                        className="w-full bg-[#6A2CF5] py-4 rounded-lg font-bold text-white hover:opacity-90 transition-all active:scale-[0.98] shadow-lg shadow-[#6A2CF5]/25 inline-flex items-center justify-center gap-2"
+                      >
+                        Sketch this idea
+                        <ArrowUpRight className="h-4 w-4" />
+                      </button>
+
+                      {isAdmin && (
+                        <div className="pt-2 border-t border-[#1e1e5a] flex items-center gap-4 text-[11px]">
+                          <button
+                            onClick={() => setStatus(0, "promoted")}
+                            className="text-[#4f46e5] font-bold hover:brightness-125"
+                          >
+                            Promote
+                          </button>
+                          <button
+                            onClick={() => setStatus(0, "dismissed")}
+                            className="text-[#8A8AA8] hover:text-[#ECECF5]"
+                          >
+                            Dismiss
+                          </button>
+                          {isAdmin && !roadmap && (
+                            <button
+                              onClick={draftRoadmap}
+                              disabled={drafting || isEmpty}
+                              className="ml-auto text-[#4f46e5] font-bold hover:brightness-125 inline-flex items-center gap-1.5"
+                            >
+                              {drafting && <Loader2 className="h-3 w-3 animate-spin" />}
+                              Draft roadmap
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            ) : (
+              <section className="py-24 text-center">
+                <Radar className="mx-auto h-10 w-10 text-[#1e1e5a]" />
+                <p className="mt-4 text-lg font-bold">
+                  {isSample
+                    ? "Pick a vertical to load live signal."
+                    : isEmpty
+                    ? `No live data yet for ${labelFor(activeTag)}.`
+                    : "No open candidates."}
+                </p>
+                <p className="mt-2 text-sm text-[#8A8AA8] max-w-md mx-auto">
+                  {isSample
+                    ? `The engine is listening to ${optionTags.length} configured vertical${optionTags.length === 1 ? "" : "s"}.`
+                    : "The nightly scan will populate this board, or run one now."}
+                </p>
+                {isAdmin && !isSample && (
+                  <Button onClick={runScan} disabled={scanning} className="mt-6 gap-2 bg-[#6A2CF5] hover:bg-[#5a24d1] text-white border-0">
+                    {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {scanning ? "Scanning…" : "Run scan now"}
+                  </Button>
+                )}
+              </section>
             )}
 
-            {/* ── Sticky filter / sort / search. Up top, not buried. ── */}
-            {!isSample && !isEmpty && (
-              <div className="sticky top-16 z-10 -mx-2 mt-6 rounded-xl border border-border bg-background/90 backdrop-blur px-2 py-2.5">
-                <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
-                  <div className="relative flex-1 min-w-[180px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            {/* ── Stack reveal: the rest of the opportunities ───── */}
+            {restCandidates.length > 0 && (
+              <section className="mt-28">
+                <div className="flex items-center justify-between mb-10 gap-6">
+                  <h2 className="text-xl sm:text-2xl font-bold">
+                    See {restCandidates.length} more {restCandidates.length === 1 ? "opportunity" : "opportunities"}
+                  </h2>
+                  <div className="h-px flex-grow bg-[#1e1e5a]" />
+                </div>
+
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {restCandidates.map((c, idx) => (
+                    <button
+                      key={(c.id ?? c.cluster_theme) + idx}
+                      onClick={() => navigate("/simulate", { state: { prefillIdea: sketchPrefill(c) } })}
+                      className="text-left bg-[#141432] p-6 rounded-xl border border-[#1e1e5a] hover:border-[#4f46e5] transition-colors group flex flex-col"
+                    >
+                      <div className="flex justify-between items-start mb-4 gap-2">
+                        <span className="px-2 py-1 bg-[#1e1e5a] text-[10px] font-bold uppercase tracking-widest rounded text-[#ECECF5]/80">
+                          {effortLabel(c.effort)}
+                        </span>
+                        <span className="text-[#4f46e5] font-bold text-xs group-hover:translate-x-1 transition-transform">→</span>
+                      </div>
+                      <h4 className="font-bold mb-2 leading-snug">{c.cluster_theme}</h4>
+                      <p className="text-sm text-[#8A8AA8] line-clamp-3 flex-1">{c.problem}</p>
+                      <div className="mt-4 pt-3 border-t border-[#1e1e5a] flex items-center justify-between text-[11px] text-[#8A8AA8]">
+                        <span>{loudnessLabel(c.pain_score)} · {Math.round(c.confidence)}% sure</span>
+                        <span>{c.evidence.member_count} posts</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Search/filter footer — kept available but de-emphasized */}
+            {!isSample && !isEmpty && candidates.length > 4 && (
+              <section className="mt-20 pt-10 border-t border-[#1e1e5a]">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8A8AA8]" />
                     <Input
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Search problems, quotes, themes…"
-                      className="h-10 pl-9 text-sm"
+                      className="h-10 pl-9 text-sm bg-[#141432] border-[#1e1e5a] text-[#ECECF5] placeholder:text-[#8A8AA8]"
                     />
                   </div>
                   <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-                    <SelectTrigger className="h-10 w-full sm:w-[180px] text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                    <SelectTrigger className="h-10 w-full sm:w-[180px] text-sm bg-[#141432] border-[#1e1e5a] text-[#ECECF5]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#141432] border-[#1e1e5a] text-[#ECECF5]">
                       <SelectItem value="pain">Sort: loudest pain</SelectItem>
                       <SelectItem value="confidence">Sort: most confident</SelectItem>
                       <SelectItem value="recent">Sort: most evidence</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                {allSources.length > 0 && (
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground mr-1">Source:</span>
-                    <button
-                      onClick={() => setSourceFilter(null)}
-                      className={`text-xs px-2.5 py-1 rounded-full border transition ${!sourceFilter ? "bg-primary/15 border-primary/40 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
-                    >All</button>
-                    {allSources.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setSourceFilter(s === sourceFilter ? null : s)}
-                        className={`text-xs px-2.5 py-1 rounded-full border transition ${sourceFilter === s ? "bg-primary/15 border-primary/40 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
-                      >{niceSource(s)}</button>
-                    ))}
-                  </div>
-                )}
                 {(query || sourceFilter) && (
-                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>
-                      Showing <span className="text-foreground font-medium">{visible.length}</span> of {candidates.length}
-                    </span>
+                  <div className="mt-2 flex items-center gap-2 text-xs text-[#8A8AA8]">
+                    <span>Showing <span className="text-[#ECECF5] font-medium">{visible.length}</span> of {candidates.length}</span>
                     <button
                       onClick={() => { setQuery(""); setSourceFilter(null); }}
-                      className="text-primary hover:brightness-110 font-medium"
+                      className="text-[#4f46e5] hover:brightness-125 font-bold"
                     >
                       Clear filters
                     </button>
                   </div>
                 )}
-              </div>
+              </section>
             )}
-
-
-            {/* themes strip moved below roadmap */}
-
-            {/* ── Roadmap (AI build-or-sell) ────────────────────────── */}
-            {!isSample && (roadmap || (isAdmin && !isEmpty)) && (
-              <div className="mt-8">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Map className="h-5 w-5 text-primary" />
-                  <h2 className="font-display text-lg font-bold">What we'd actually do about it</h2>
-                  <span className="text-xs text-muted-foreground">— AI drafted over the live clusters</span>
-                  {isAdmin && (
-                    <Button size="sm" variant="outline" className="ml-auto gap-1.5" onClick={draftRoadmap} disabled={drafting || isEmpty}>
-                      {drafting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                      {roadmap ? "Redraft" : "Draft roadmap"}
-                    </Button>
-                  )}
-                </div>
-
-                {roadmap ? (
-                  <div className="mt-3 space-y-3">
-                    <Card className="border-primary/20 bg-primary/5 p-4">
-                      <p className="text-sm leading-relaxed">{roadmap.summary}</p>
-                      {roadmap.market_read && <p className="mt-2 text-xs text-muted-foreground">{roadmap.market_read}</p>}
-                    </Card>
-                    {roadmap.opportunities.map((o) => {
-                      const motion = motionFor(o.motion);
-                      const oppExpanded = expandedOpp === o.rank;
-                      return (
-                        <Card key={o.rank} className="p-5">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-display text-sm font-extrabold text-primary">#{o.rank}</span>
-                            <h3 className="font-display text-lg font-bold flex-1 min-w-0">{o.title}</h3>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="default" className="cursor-help">{motion.label}</Badge>
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-[260px] text-xs">{motion.tip}</TooltipContent>
-                            </Tooltip>
-                            <Hint text="Rough build effort. Small ≈ a weekend, Medium ≈ a couple weeks, Large ≈ a month+.">
-                              <Badge variant="outline">{o.effort === "S" ? "Small lift" : o.effort === "L" ? "Large lift" : "Medium lift"}</Badge>
-                            </Hint>
-                          </div>
-
-                          {verticalEvidenceCount !== null && verticalEvidenceCount > 0 && (
-                            <p className="mt-2 text-xs text-emerald-300/90">
-                              Backed by <span className="font-semibold">{verticalEvidenceCount.toLocaleString()}</span> public complaints in {labelFor(activeTag)}
-                            </p>
-                          )}
-
-                          <div className="mt-3 space-y-2 text-sm">
-                            <div>
-                              <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">The problem</div>
-                              <p className="mt-0.5">{o.problem}</p>
-                            </div>
-                            <div>
-                              <div className="text-[11px] font-semibold uppercase tracking-widest text-primary">What we'd build</div>
-                              <p className="mt-0.5">{o.build}</p>
-                            </div>
-                            <div>
-                              <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Who'd buy it</div>
-                              <p className="mt-0.5">{o.customer}</p>
-                            </div>
-                          </div>
-
-                          {o.roi && (
-                            <p className="mt-3 text-xs text-muted-foreground">
-                              <span className="font-semibold text-foreground">Why it pays:</span> {o.roi}
-                            </p>
-                          )}
-                          {o.based_on?.length > 0 && (
-                            <p className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground/70">
-                              grounded in: {o.based_on.join(" · ")}
-                            </p>
-                          )}
-
-                          {verticalEvidenceSamples.length > 0 && (
-                            <div className="mt-3">
-                              <button
-                                onClick={() => setExpandedOpp(oppExpanded ? null : o.rank)}
-                                className="text-xs font-semibold text-primary inline-flex items-center gap-1.5 hover:brightness-110"
-                              >
-                                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${oppExpanded ? "rotate-180" : ""}`} />
-                                {oppExpanded ? "Hide evidence" : `Show evidence (${Math.min(verticalEvidenceSamples.length, 3)} of ${verticalEvidenceCount ?? verticalEvidenceSamples.length} real posts)`}
-                              </button>
-                              {oppExpanded && (
-                                <div className="mt-2 space-y-1.5 rounded-lg border border-border bg-background/50 p-3">
-                                  {verticalEvidenceSamples.slice(0, 3).map((r) => (
-                                    <a
-                                      key={r.id}
-                                      href={r.source_url ?? "#"}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="group flex items-start gap-2 text-xs hover:bg-muted/40 rounded p-1.5 transition"
-                                    >
-                                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 shrink-0">{niceSource(r.source)}</Badge>
-                                      <span className="flex-1 text-foreground/80 group-hover:text-foreground line-clamp-2">
-                                        {r.title || r.body?.slice(0, 140) || "(untitled)"}
-                                      </span>
-                                      <ExternalLink className="h-3 w-3 text-muted-foreground group-hover:text-primary shrink-0 mt-0.5" />
-                                    </a>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            <Button
-                              size="sm"
-                              className="gap-1.5"
-                              onClick={() =>
-                                navigate("/simulate", {
-                                  state: {
-                                    prefillIdea: `${o.title}\n\nProblem: ${o.problem}\n\nWhat to build: ${o.build}\n\nFor: ${o.customer}\n\n(Grounded in live ${labelFor(activeTag)} signal — ${verticalEvidenceCount ?? "many"} real public complaints.)`,
-                                  },
-                                })
-                              }
-                            >
-                              <Sparkles className="h-3.5 w-3.5" /> Sketch this idea
-                            </Button>
-                          </div>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <Card className="mt-3 p-6 text-center text-sm text-muted-foreground">
-                    No roadmap drafted yet. Hit "Draft roadmap" to turn the live pains into ranked plays.
-                  </Card>
-                )}
-              </div>
-            )}
-
-            {/* ── Trending themes strip (below the opportunities). Collapsed by default on mobile. ──── */}
-            {themes.length > 0 && (
-              <div className="mt-8">
-                <div className="flex items-baseline gap-2">
-                  <h2 className="font-display text-lg font-bold">Themes that keep coming back</h2>
-                  <span className="hidden sm:inline text-xs text-muted-foreground">— durable across scans</span>
-                  <button
-                    className="md:hidden ml-auto text-xs font-semibold text-primary hover:brightness-110"
-                    onClick={() => setShowThemes((s) => !s)}
-                  >
-                    {showThemes ? "Hide" : `Show (${themes.length})`}
-                  </button>
-                </div>
-                <div className={`mt-3 -mx-2 px-2 overflow-x-auto ${showThemes ? "" : "hidden md:block"}`}>
-                  <div className="flex gap-3 pb-2">
-                    {themes.slice(0, 8).map((t, i) => {
-                      const tl = trendLabel(t.trend);
-                      return (
-                        <Card key={(t.id ?? t.title) + i} className="shrink-0 w-[260px] flex flex-col gap-2 p-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="text-sm font-semibold leading-tight">{t.title}</span>
-                            <Sparkline points={(t.score_history ?? []).map((p) => p.s)} />
-                          </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className={`font-display text-lg font-extrabold ${painTone(t.pain_score)}`}>{Math.round(t.pain_score)}</span>
-                            <span className={`font-semibold ${tl.cls}`}>{tl.icon} {t.trend > 0 ? "+" : ""}{t.trend}</span>
-                            <span className="ml-auto text-muted-foreground">seen {t.occurrence_count}×</span>
-                          </div>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-
-            {/* ── Candidates ──────────────────────────────────────── */}
-            <div className="mt-8 space-y-4">
-              <h2 className="font-display text-lg font-bold">The pains, ranked</h2>
-
-              {visible.map((c, idx) => {
-                const realIdx = candidates.indexOf(c);
-                const key = c.id ?? c.cluster_theme;
-                const expanded = expandedId === key;
-                const evidence = c.cluster_id ? evidenceCache[c.cluster_id] : undefined;
-                return (
-                  <Card key={key + idx} className="p-5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Hint text="0–100 score combining how often this pain appears and how intensely people describe it.">
-                        <span className={`flex items-center gap-1 font-display text-xl font-extrabold ${painTone(c.pain_score)}`}>
-                          <TrendingUp className="h-4 w-4" />{Math.round(c.pain_score)}
-                        </span>
-                      </Hint>
-                      <span className="text-[11px] uppercase tracking-widest text-muted-foreground">pain</span>
-                      <h3 className="ml-1 font-display text-lg font-bold flex-1 min-w-0">{c.cluster_theme}</h3>
-                      <div className="flex items-center gap-2">
-                        <Hint text="How sure the model is, given the size and consistency of the evidence.">
-                          <Badge variant="secondary">{c.confidence}% sure</Badge>
-                        </Hint>
-                        <Badge variant="outline">{c.evidence.member_count} real posts</Badge>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">The problem</div>
-                        <p className="mt-1 text-sm">{c.problem}</p>
-                      </div>
-                      <div>
-                        <div className="text-[11px] font-semibold uppercase tracking-widest text-primary">What we'd build</div>
-                        <p className="mt-1 text-sm">{c.proposed_solution}</p>
-                      </div>
-                    </div>
-
-                    {c.representative_quotes?.length > 0 && (
-                      <div className="mt-3 space-y-1.5 rounded-lg border border-border bg-muted/30 p-3">
-                        {c.representative_quotes.slice(0, 3).map((q, i) => (
-                          <div key={i} className="flex gap-2 text-xs text-muted-foreground">
-                            <Quote className="h-3.5 w-3.5 shrink-0 opacity-60 mt-0.5" /><span>{q}</span>
-                          </div>
-                        ))}
-                        <div className="pt-1 flex flex-wrap items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground/70">
-                          <span>seen on:</span>
-                          {c.evidence.sources.map((s) => (
-                            <Badge key={s} variant="outline" className="text-[10px] px-1.5 py-0">{niceSource(s)}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Evidence drawer — every claim, traceable. */}
-                    {c.cluster_id && (
-                      <div className="mt-3">
-                        <button
-                          onClick={() => toggleExpand(c)}
-                          className="text-xs font-semibold text-primary inline-flex items-center gap-1.5 hover:brightness-110"
-                        >
-                          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
-                          {expanded ? "Hide evidence" : `Show evidence (${c.evidence.member_count} real posts)`}
-                        </button>
-                        {expanded && (
-                          <div className="mt-2 space-y-1.5 rounded-lg border border-border bg-background/50 p-3">
-                            {!evidence ? (
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Loader2 className="h-3 w-3 animate-spin" /> Loading source posts…
-                              </div>
-                            ) : evidence.length === 0 ? (
-                              <p className="text-xs text-muted-foreground">No source rows linked to this cluster yet.</p>
-                            ) : (
-                              evidence.slice(0, 10).map((r) => (
-                                <a
-                                  key={r.id}
-                                  href={r.source_url ?? "#"}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="group flex items-start gap-2 text-xs hover:bg-muted/40 rounded p-1.5 transition"
-                                >
-                                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 shrink-0">{niceSource(r.source)}</Badge>
-                                  <span className="flex-1 text-foreground/80 group-hover:text-foreground line-clamp-2">
-                                    {r.title || r.body?.slice(0, 140) || "(untitled)"}
-                                  </span>
-                                  <ExternalLink className="h-3 w-3 text-muted-foreground group-hover:text-primary shrink-0 mt-0.5" />
-                                </a>
-                              ))
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5"
-                        onClick={() =>
-                          navigate("/simulate", {
-                            state: {
-                              prefillIdea: `Problem: ${c.problem}\n\nProposed: ${c.proposed_solution}\n\nGrounded in real signal (${c.evidence.member_count} mentions across ${c.evidence.sources.map(niceSource).join(", ")}).`,
-                            },
-                          })
-                        }
-                      >
-                        <Sparkles className="h-3.5 w-3.5" /> Riff on this in Sketchpad
-                      </Button>
-                      {isAdmin && (
-                        <>
-                          <Button size="sm" className="gap-1.5" onClick={() => setStatus(realIdx, "promoted")}>
-                            Promote <ArrowUpRight className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button size="sm" variant="ghost" className="gap-1.5 text-muted-foreground" onClick={() => setStatus(realIdx, "dismissed")}>
-                            <X className="h-3.5 w-3.5" /> Dismiss
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </Card>
-                );
-              })}
-
-              {isSample && (
-                <Card className="p-10 text-center">
-                  <Radar className="mx-auto h-8 w-8 text-muted-foreground/50" />
-                  <p className="mt-3 text-sm font-medium">Pick a vertical above to load live signal.</p>
-                  <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground">
-                    The engine is currently listening to {optionTags.length} configured vertical{optionTags.length === 1 ? "" : "s"}.
-                    {isAdmin && <> Add a new one with <span className="text-primary">+</span> to start mining a new niche.</>}
-                  </p>
-                </Card>
-              )}
-
-              {isEmpty && (
-                <Card className="p-10 text-center">
-                  <Radar className="mx-auto h-8 w-8 text-muted-foreground/50" />
-                  <p className="mt-3 text-sm font-medium">No live data yet for {labelFor(activeTag)}.</p>
-                  <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground">
-                    {verticals.some((v) => v.product_tag === activeTag)
-                      ? "The nightly scan will populate this board. "
-                      : ""}
-                    {isAdmin ? "Or run a scan now to mine fresh pain." : "Check back after the next scan."}
-                  </p>
-                  {isAdmin && (
-                    <Button onClick={runScan} disabled={scanning} className="mt-4 gap-2">
-                      {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                      {scanning ? "Scanning…" : "Run scan now"}
-                    </Button>
-                  )}
-                </Card>
-              )}
-              {allTriaged && (
-                <Card className="p-10 text-center text-sm text-muted-foreground">
-                  Board is clear — every candidate triaged. Run a scan to mine fresh signal.
-                </Card>
-              )}
-            </div>
-
-            {/* Admin: add a vertical */}
-            <Dialog open={addOpen} onOpenChange={setAddOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add a vertical</DialogTitle>
-                  <DialogDescription>
-                    Define a niche to listen to. The nightly scan mines these subreddits for these
-                    keywords and ranks the pain it finds.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="v-name">Vertical</Label>
-                    <Input id="v-name" placeholder="e.g. Wholesale distribution / 3PL"
-                      value={newVertical} onChange={(e) => setNewVertical(e.target.value)} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="v-subs">Subreddits</Label>
-                    <Input id="v-subs" placeholder="e.g. logistics, 3PL, supplychain"
-                      value={newSubs} onChange={(e) => setNewSubs(e.target.value)} />
-                    <p className="text-[11px] text-muted-foreground">Comma or space separated. Drop the r/ prefix.</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="v-kw">Keywords</Label>
-                    <Textarea id="v-kw" rows={3} placeholder="e.g. WMS, 3PL software, broker carrier identity, freight scam"
-                      value={newKeywords} onChange={(e) => setNewKeywords(e.target.value)} />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="ghost" onClick={() => setAddOpen(false)} disabled={saving}>Cancel</Button>
-                  <Button onClick={createVertical} disabled={saving} className="gap-2">
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                    Add vertical
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           </main>
+
+          {/* Admin: add a vertical */}
+          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+            <DialogContent className="bg-[#141432] border-[#1e1e5a] text-[#ECECF5]">
+              <DialogHeader>
+                <DialogTitle>Add a vertical</DialogTitle>
+                <DialogDescription className="text-[#8A8AA8]">
+                  Define a niche to listen to. The nightly scan mines these subreddits for these
+                  keywords and ranks the pain it finds.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="v-name">Vertical</Label>
+                  <Input id="v-name" placeholder="e.g. Wholesale distribution / 3PL"
+                    value={newVertical} onChange={(e) => setNewVertical(e.target.value)}
+                    className="bg-[#0a0a1a] border-[#1e1e5a] text-[#ECECF5]" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="v-subs">Subreddits</Label>
+                  <Input id="v-subs" placeholder="e.g. logistics, 3PL, supplychain"
+                    value={newSubs} onChange={(e) => setNewSubs(e.target.value)}
+                    className="bg-[#0a0a1a] border-[#1e1e5a] text-[#ECECF5]" />
+                  <p className="text-[11px] text-[#8A8AA8]">Comma or space separated. Drop the r/ prefix.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="v-kw">Keywords</Label>
+                  <Textarea id="v-kw" rows={3} placeholder="e.g. WMS, 3PL software, broker carrier identity, freight scam"
+                    value={newKeywords} onChange={(e) => setNewKeywords(e.target.value)}
+                    className="bg-[#0a0a1a] border-[#1e1e5a] text-[#ECECF5]" />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setAddOpen(false)} disabled={saving} className="text-[#8A8AA8] hover:bg-[#1e1e5a] hover:text-[#ECECF5]">Cancel</Button>
+                <Button onClick={createVertical} disabled={saving} className="gap-2 bg-[#6A2CF5] hover:bg-[#5a24d1] text-white">
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Add vertical
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </HelmetProvider>
     </TooltipProvider>
